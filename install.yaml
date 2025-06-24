@@ -1,6 +1,15 @@
 name: dev-tools
 
 project_files:
-  - docker-compose.dev-tools.yaml
+  - commands/host/install-drupal
+  - commands/host/lint-all
+  - commands/web/cspell
+  - commands/web/eslint
+  - commands/web/install-drupal
+  - commands/web/phpcs
+  - commands/web/phpstan
+  - commands/web/stylelint
+  - commands/web/thin-db-export
+  - commands/web/twigcs
 
 ddev_version_constraint: '>= v1.24.3'
