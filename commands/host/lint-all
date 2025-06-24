@@ -1,0 +1,28 @@
+#!/bin/bash
+
+## Description: Run all linting tools on files
+## Usage: lint-all [--files|-f "file1 file2"] [--all|-a]
+## Example: "ddev lint-all" (checks changed files)
+##          "ddev lint-all -f 'file1.php file2.js'" (checks specific files)
+##          "ddev lint-all --all" (checks all custom files)
+## ExecRaw: true
+
+echo "Running all linting tools..."
+
+echo -e "\n🔍 Running PHP CodeSniffer..."
+ddev phpcs "$@" || exit $?
+
+echo -e "\n🔍 Running ESLint..."
+ddev eslint "$@" || exit $?
+
+echo -e "\n🔍 Running Stylelint..."
+ddev stylelint "$@" || exit $?
+
+echo -e "\n🔍 Running Twig CS Fixer..."
+ddev twigcs "$@" || exit $?
+
+echo -e "\n🔍 Running CSpell..."
+ddev cspell "$@" || exit $?
+
+echo -e "\n🔍 Running PHPStan..."
+ddev phpstan "$@" || exit $?

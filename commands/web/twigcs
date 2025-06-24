@@ -1,0 +1,25 @@
+#!/bin/bash
+
+## Description: Run Twig CS Fixer on files
+## Usage: twigcs [--files|-f "file1 file2"] [--all|-a]
+## Example: "ddev twigcs" (checks changed files)
+##          "ddev twigcs -f 'file1.twig file2.twig'" (checks specific files)
+##          "ddev twigcs --all" (checks all custom files)
+
+source "${0%/*}/utils.sh"
+
+FILES=$(get_files_to_check "twig" "$@")
+
+if [ -z "$FILES" ]; then
+    echo "No Twig files to check"
+    exit 0
+fi
+
+composer config allow-plugins.vincentlanglet/twig-cs-fixer true
+composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+composer require drupal/coder vincentlanglet/twig-cs-fixer
+
+echo "Checking files:"
+echo "$FILES" | tr ' ' '\n'
+
+./bin/twig-cs-fixer lint $FILES 

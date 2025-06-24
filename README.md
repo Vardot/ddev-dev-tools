@@ -3,11 +3,12 @@
 [![last commit](https://img.shields.io/github/last-commit/Vardot/ddev-dev-tools)](https://github.com/Vardot/ddev-dev-tools/commits)
 [![release](https://img.shields.io/github/v/release/Vardot/ddev-dev-tools)](https://github.com/Vardot/ddev-dev-tools/releases/latest)
 
-# DDEV Dev Tools
+This addon includes commonly used DDEV commands for Drupal development:
 
-## Overview
-
-This add-on integrates Dev Tools into your [DDEV](https://ddev.com/) project.
+- 🧹 Linting: `eslint`, `stylelint`, `phpcs`, `phpstan`, `cspell`, `twigcs`
+- 🛠️ Install: `install-drupal`
+- 📦 Export: `thin-db-export`
+- 🔄 Scripts: `utils.sh`
 
 ## Installation
 
@@ -16,33 +17,10 @@ ddev add-on get Vardot/ddev-dev-tools
 ddev restart
 ```
 
-After installation, make sure to commit the `.ddev` directory to version control.
-
 ## Usage
 
-| Command | Description |
-| ------- | ----------- |
-| `ddev describe` | View service status and used ports for Dev Tools |
-| `ddev logs -s dev-tools` | Check Dev Tools logs |
-
-## Advanced Customization
-
-To change the Docker image:
-
 ```bash
-ddev dotenv set .ddev/.env.dev-tools --dev-tools-docker-image="busybox:stable"
-ddev add-on get Vardot/ddev-dev-tools
-ddev restart
+ddev lint-all
+ddev install-drupal
+ddev thin-db-export
 ```
-
-Make sure to commit the `.ddev/.env.dev-tools` file to version control.
-
-All customization options (use with caution):
-
-| Variable | Flag | Default |
-| -------- | ---- | ------- |
-| `DEV_TOOLS_DOCKER_IMAGE` | `--dev-tools-docker-image` | `busybox:stable` |
-
-## Credits
-
-**Contributed and maintained by [@Vardot](https://github.com/Vardot)**

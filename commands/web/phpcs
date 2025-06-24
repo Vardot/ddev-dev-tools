@@ -1,0 +1,26 @@
+#!/bin/bash
+
+## Description: Run PHP CodeSniffer on files
+## Usage: phpcs [--files|-f "file1 file2"] [--all|-a]
+## Example: "ddev phpcs" (checks changed files)
+##          "ddev phpcs -f 'file1.php file2.php'" (checks specific files)
+##          "ddev phpcs --all" (checks all custom files)
+## ExecRaw: true
+
+source "${0%/*}/utils.sh"
+
+FILES=$(get_files_to_check "php|module" "$@")
+
+if [ -z "$FILES" ]; then
+    echo "No PHP files to check"
+    exit 0
+fi
+
+composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+composer require drupal/coder dealerdirect/phpcodesniffer-composer-installer
+
+echo "Checking files:"
+echo "$FILES" | tr ' ' '\n'
+
+phpcs -s --colors --standard=Drupal --report-full --report-summary $FILES
+phpcs -s --colors --standard=DrupalPractice --report-full --report-summary --warning-severity=0 $FILES 

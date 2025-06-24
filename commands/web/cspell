@@ -1,0 +1,25 @@
+#!/bin/bash
+
+## Description: Run CSpell on files
+## Usage: cspell [--files|-f "file1 file2"] [--all|-a] [--theme theme_name]
+## Example: "ddev cspell" (checks changed files)
+##          "ddev cspell -f 'file1.txt file2.txt'" (checks specific files)
+##          "ddev cspell --all" (checks all custom files)
+##          "ddev cspell --theme mytheme" (use specific theme)
+
+source "${0%/*}/utils.sh"
+
+THEME=$(get_theme_name "$@") || exit $?
+FILES=$(get_files_to_check "php|module|js|yml|yaml|json|css|scss|sass|md|txt" "$@")
+
+if [ -z "$FILES" ]; then
+    echo "No text files to check"
+    exit 0
+fi
+
+yarn --modules-folder /var/www/html/node_modules --cwd "/var/www/html/docroot/themes/custom/${THEME}/" install
+
+echo "Checking files:"
+echo "$FILES" | tr ' ' '\n'
+
+node ./node_modules/cspell/bin.js --config .cspell.json --color $FILES

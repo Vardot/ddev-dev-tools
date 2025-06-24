@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail  # Exit on errors and undefined variables
+
+## Description: Install Drupal using existing configuration
+## Usage: install-drupal
+
+echo "🛠️ Installing Drupal..."
+# Creating this directory so we can clear cache.
+mkdir -p docroot/sites/default/files/addtoany/menu
+
+echo "📥 Importing Database..."
+ddev import-db --file=./backups/thin-db.sql.gz
+ddev drush cr
+
+echo "📦 Updating Database..."
+ddev drush updb
+ddev drush cr
+
+echo "⚙️ Importing Configuration..."
+ddev drush cim -y
+ddev drush cr
+
+echo "✅ Installation Complete!"
