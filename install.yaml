@@ -11,5 +11,6 @@ project_files:
   - commands/web/stylelint
   - commands/web/thin-db-export
   - commands/web/twigcs
+  - commands/web/utils.sh
 
 ddev_version_constraint: '>= v1.24.3'
