@@ -1,11 +1,7 @@
 #!/bin/bash
 
-# Default theme name
-DEFAULT_THEME="sn"
-
 # Function to get theme name from arguments or use default
 get_theme_name() {
-    local theme_name="$DEFAULT_THEME"
     local args=("$@")
     
     for ((i=0; i<${#args[@]}; i++)); do
