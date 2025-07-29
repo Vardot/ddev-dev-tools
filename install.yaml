@@ -6,6 +6,7 @@ project_files:
   - commands/web/cspell
   - commands/web/eslint
   - commands/web/install-drupal
+  - commands/web/lint
   - commands/web/phpcs
   - commands/web/phpstan
   - commands/web/stylelint
