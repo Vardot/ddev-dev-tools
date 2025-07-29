@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -e
+
+echo "🔍 Detecting Changed Files..."
+
+git --version
+PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
+JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
+STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
+TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
+TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
+
+echo "Running tools..."
+
+# PHP Linting
+if [ ! -z "$PHP_CHANGED_FILES" ]; then
+  ddev exec composer require drupal/coder dealerdirect/phpcodesniffer-composer-installer
+  ddev exec phpcs -- -s --colors --standard=Drupal --report-full --report-summary $PHP_CHANGED_FILES
+  ddev exec phpcs -- -s --colors --standard=DrupalPractice --report-full --report-summary $PHP_CHANGED_FILES
+fi
+
+# JS Linting
+if [ ! -z "$JS_CHANGED_FILES" ]; then
+  ddev yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install
+  ddev exec node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $JS_CHANGED_FILES
+fi
+
+# CSS Linting
+if [ ! -z "$STYLE_CHANGED_FILES" ]; then
+  ddev yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install
+  ddev exec node ./node_modules/stylelint/bin/stylelint.mjs --config ./.stylelintrc.json --color $STYLE_CHANGED_FILES
+fi
+
+# Twig Linting
+if [ ! -z "$TWIG_CHANGED_FILES" ]; then
+  ddev exec composer require vincentlanglet/twig-cs-fixer
+  ddev exec ./bin/twig-cs-fixer lint $TWIG_CHANGED_FILES
+fi
+
+# Spell Checking
+if [ ! -z "$TEXT_CHANGED_FILES" ]; then
+  ddev yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install
+  ddev exec node ./node_modules/cspell/bin.mjs --config .cspell.json --color $TEXT_CHANGED_FILES
+fi
