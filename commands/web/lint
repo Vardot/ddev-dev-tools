@@ -2,6 +2,12 @@
 
 set -e
 
+PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
+JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
+STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
+TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
+TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
+
 echo "Running linting tools..."
 
 # PHP Linting
