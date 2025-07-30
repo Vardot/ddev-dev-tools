@@ -25,6 +25,9 @@ if [ -n "$PHP_CHANGED_FILES" ]; then
   echo "🔧 Allowing PHPCS plugin..."
   composer config --no-interaction allow-plugins.dealerdirect/phpcodesniffer-composer-installer true || { echo "❌ Failed to allow PHPCS plugin"; exit 1; }
 
+  echo "📦 Cleaning bin/phpcs if it exists (to avoid Composer conflicts)"
+  rm -f bin/phpcs || true
+
   echo "📦 Installing PHPCS-related packages..."
   composer require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer || { echo "❌ Failed to install PHPCS packages"; exit 1; }
 
