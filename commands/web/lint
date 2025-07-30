@@ -22,7 +22,12 @@ echo "🎯 Running linters..."
 if [ -n "$PHP_CHANGED_FILES" ]; then
   echo "🧼 PHP Linting on:"
   echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
-  composer require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer || { echo "❌ Failed to install PHPCS"; exit 1; }
+  echo "🔧 Allowing PHPCS plugin..."
+  composer config --no-interaction allow-plugins.dealerdirect/phpcodesniffer-composer-installer true || { echo "❌ Failed to allow PHPCS plugin"; exit 1; }
+
+  echo "📦 Installing PHPCS-related packages..."
+  composer require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer || { echo "❌ Failed to install PHPCS packages"; exit 1; }
+
   if [ ! -f ./vendor/bin/phpcs ]; then
     echo "❌ PHPCS binary not found even after installation"
     exit 1
