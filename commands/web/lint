@@ -2,64 +2,76 @@
 
 set -e
 
-PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
-JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
-STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
-TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
-TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
+echo "📦 Reading changed files from .ddev"
 
-echo "Running linting tools..."
+PHP_CHANGED_FILES=$(cat .ddev/changed_php_files.txt 2>/dev/null | xargs)
+JS_CHANGED_FILES=$(cat .ddev/changed_js_files.txt 2>/dev/null | xargs)
+STYLE_CHANGED_FILES=$(cat .ddev/changed_css_files.txt 2>/dev/null | xargs)
+TWIG_CHANGED_FILES=$(cat .ddev/changed_twig_files.txt 2>/dev/null | xargs)
+TEXT_CHANGED_FILES=$(cat .ddev/changed_text_files.txt 2>/dev/null | xargs)
+
+EXIT_CODE=0
+
+echo "🔧 Installing dependencies (Composer & Yarn)"
+composer install --optimize-autoloader || { echo "❌ Composer install failed"; exit 1; }
+yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install || { echo "❌ Yarn install failed"; exit 1; }
+
+echo "🎯 Running linters..."
 
 # PHP Linting
-if [ -z "$PHP_CHANGED_FILES" ]; then
-echo "No relevant files changed. Skipping PHP Coding Standards (PHPCS) step."
+if [ -n "$PHP_CHANGED_FILES" ]; then
+  echo "🧼 PHP Linting on:"
+  echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
+  command -v phpcs >/dev/null || { echo "❌ PHPCS not found"; EXIT_CODE=1; }
+  phpcs --version || EXIT_CODE=1
+  phpcs -- -s --colors --standard=Drupal --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
+  phpcs -- -s --colors --standard=DrupalPractice --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
 else
-echo \"$PHP_CHANGED_FILES\" | tr ' ' '\n'
-composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-composer require drupal/coder dealerdirect/phpcodesniffer-composer-installer
-phpcs --version
-phpcs -- -s --colors --standard=Drupal --report-full --report-summary $PHP_CHANGED_FILES
-phpcs -- -s --colors --standard=DrupalPractice --report-full --report-summary $PHP_CHANGED_FILES
+  echo "✅ No PHP files changed"
 fi
 
 # JS Linting
-if [ -z "$JS_CHANGED_FILES" ]; then
-echo "No relevant files changed. Skipping JavaScript Linting (ESLint) step."
+if [ -n "$JS_CHANGED_FILES" ]; then
+  echo "🧼 JS Linting on:"
+  echo "$JS_CHANGED_FILES" | tr ' ' '\n'
+  node ./node_modules/eslint/bin/eslint.js --version || EXIT_CODE=1
+  node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $JS_CHANGED_FILES || EXIT_CODE=1
 else
-echo \"$JS_CHANGED_FILES\" | tr ' ' '\n'
-yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install
-node ./node_modules/eslint/bin/eslint.js --version
-node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $JS_CHANGED_FILES
+  echo "✅ No JS files changed"
 fi
 
 # CSS Linting
-if [ -z "$STYLE_CHANGED_FILES" ]; then
-echo "No relevant files changed. Skipping CSS Linting (Stylelint) step."
+if [ -n "$STYLE_CHANGED_FILES" ]; then
+  echo "🧼 CSS Linting on:"
+  echo "$STYLE_CHANGED_FILES" | tr ' ' '\n'
+  node ./node_modules/stylelint/bin/stylelint.mjs --version || EXIT_CODE=1
+  node ./node_modules/stylelint/bin/stylelint.mjs --config ./.stylelintrc.json --color $STYLE_CHANGED_FILES || EXIT_CODE=1
 else
-echo \"$STYLE_CHANGED_FILES\" | tr ' ' '\n'
-yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install
-node ./node_modules/stylelint/bin/stylelint.mjs --version
-node ./node_modules/stylelint/bin/stylelint.mjs --config ./.stylelintrc.json  --color  $STYLE_CHANGED_FILES
+  echo "✅ No CSS files changed"
 fi
 
 # Twig Linting
-if [ -z "$TWIG_CHANGED_FILES" ]; then
-echo "No relevant files changed. Skipping Twig Linting (Twig-CS-Fixer) step."
+if [ -n "$TWIG_CHANGED_FILES" ]; then
+  echo "🧼 Twig Linting on:"
+  echo "$TWIG_CHANGED_FILES" | tr ' ' '\n'
+  composer config allow-plugins.vincentlanglet/twig-cs-fixer true
+  composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+  composer require --dev vincentlanglet/twig-cs-fixer || EXIT_CODE=1
+  ./vendor/bin/twig-cs-fixer --version || EXIT_CODE=1
+  ./vendor/bin/twig-cs-fixer lint $TWIG_CHANGED_FILES || EXIT_CODE=1
 else
-echo \"$TWIG_CHANGED_FILES\" | tr ' ' '\n'
-composer config allow-plugins.vincentlanglet/twig-cs-fixer true
-composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-composer require drupal/coder vincentlanglet/twig-cs-fixer
-./bin/twig-cs-fixer --version
-./bin/twig-cs-fixer lint $TWIG_CHANGED_FILES
+  echo "✅ No Twig files changed"
 fi
 
 # Spell Checking
-if [ -z "$TEXT_CHANGED_FILES" ]; then
-echo "No relevant files changed. Skipping Spell Checking (CSpell) step."
+if [ -n "$TEXT_CHANGED_FILES" ]; then
+  echo "📔 Spell Checking on:"
+  echo "$TEXT_CHANGED_FILES" | tr ' ' '\n'
+  node ./node_modules/cspell/bin.mjs --version || EXIT_CODE=1
+  node ./node_modules/cspell/bin.mjs --config .cspell.json --color $TEXT_CHANGED_FILES || EXIT_CODE=1
 else
-echo \"$TEXT_CHANGED_FILES\" | tr ' ' '\n'
-yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install
-node ./node_modules/cspell/bin.mjs --version
-node ./node_modules/cspell/bin.mjs --config .cspell.json --color $TEXT_CHANGED_FILES
+  echo "✅ No text/code files changed for spell checking"
 fi
+
+echo "✅ Linting finished"
+exit $EXIT_CODE
