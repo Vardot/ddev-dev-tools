@@ -1,14 +1,14 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 echo "📦 Reading changed files from .ddev"
 
-PHP_CHANGED_FILES=$(cat .ddev/changed_php_files.txt 2>/dev/null | xargs)
-JS_CHANGED_FILES=$(cat .ddev/changed_js_files.txt 2>/dev/null | xargs)
-STYLE_CHANGED_FILES=$(cat .ddev/changed_css_files.txt 2>/dev/null | xargs)
-TWIG_CHANGED_FILES=$(cat .ddev/changed_twig_files.txt 2>/dev/null | xargs)
-TEXT_CHANGED_FILES=$(cat .ddev/changed_text_files.txt 2>/dev/null | xargs)
+PHP_CHANGED_FILES=$(cat .ddev/changed_php_files.txt 2>/dev/null | xargs || true)
+JS_CHANGED_FILES=$(cat .ddev/changed_js_files.txt 2>/dev/null | xargs || true)
+STYLE_CHANGED_FILES=$(cat .ddev/changed_css_files.txt 2>/dev/null | xargs || true)
+TWIG_CHANGED_FILES=$(cat .ddev/changed_twig_files.txt 2>/dev/null | xargs || true)
+TEXT_CHANGED_FILES=$(cat .ddev/changed_text_files.txt 2>/dev/null | xargs || true)
 
 EXIT_CODE=0
 
@@ -22,10 +22,14 @@ echo "🎯 Running linters..."
 if [ -n "$PHP_CHANGED_FILES" ]; then
   echo "🧼 PHP Linting on:"
   echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
-  command -v phpcs >/dev/null || { echo "❌ PHPCS not found"; EXIT_CODE=1; }
-  phpcs --version || EXIT_CODE=1
-  phpcs -- -s --colors --standard=Drupal --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
-  phpcs -- -s --colors --standard=DrupalPractice --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
+  composer require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer || { echo "❌ Failed to install PHPCS"; exit 1; }
+  if [ ! -f ./vendor/bin/phpcs ]; then
+    echo "❌ PHPCS binary not found even after installation"
+    exit 1
+  fi
+  ./vendor/bin/phpcs --version || EXIT_CODE=1
+  ./vendor/bin/phpcs -- -s --colors --standard=Drupal --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
+  ./vendor/bin/phpcs -- -s --colors --standard=DrupalPractice --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
 else
   echo "✅ No PHP files changed"
 fi
@@ -54,9 +58,7 @@ fi
 if [ -n "$TWIG_CHANGED_FILES" ]; then
   echo "🧼 Twig Linting on:"
   echo "$TWIG_CHANGED_FILES" | tr ' ' '\n'
-  composer config allow-plugins.vincentlanglet/twig-cs-fixer true
-  composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-  composer require --dev vincentlanglet/twig-cs-fixer || EXIT_CODE=1
+  composer require --dev vincentlanglet/twig-cs-fixer || { echo "❌ Failed to install twig-cs-fixer"; exit 1; }
   ./vendor/bin/twig-cs-fixer --version || EXIT_CODE=1
   ./vendor/bin/twig-cs-fixer lint $TWIG_CHANGED_FILES || EXIT_CODE=1
 else
