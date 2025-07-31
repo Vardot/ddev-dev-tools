@@ -1,87 +1,52 @@
 #!/bin/bash
 
+# Fail on:
+# -e : any command fails
+# -u : undefined variables
+# -o pipefail : failure in a pipeline propagates
 set -euo pipefail
 
-echo "📦 Reading changed files from .ddev"
+echo "🔍 Running linters..."
 
-PHP_CHANGED_FILES=$(cat .ddev/changed_php_files.txt 2>/dev/null | xargs || true)
-JS_CHANGED_FILES=$(cat .ddev/changed_js_files.txt 2>/dev/null | xargs || true)
-STYLE_CHANGED_FILES=$(cat .ddev/changed_css_files.txt 2>/dev/null | xargs || true)
-TWIG_CHANGED_FILES=$(cat .ddev/changed_twig_files.txt 2>/dev/null | xargs || true)
-TEXT_CHANGED_FILES=$(cat .ddev/changed_text_files.txt 2>/dev/null | xargs || true)
-
-EXIT_CODE=0
-
-echo "🔧 Installing dependencies (Composer & Yarn)"
-composer install --optimize-autoloader || { echo "❌ Composer install failed"; exit 1; }
-yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install || { echo "❌ Yarn install failed"; exit 1; }
-
-echo "🎯 Running linters..."
-
-# PHP Linting
-if [ -n "$PHP_CHANGED_FILES" ]; then
-  echo "🧼 PHP Linting on:"
-  echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
-  echo "🔧 Allowing PHPCS plugin..."
-  composer config --no-interaction allow-plugins.dealerdirect/phpcodesniffer-composer-installer true || { echo "❌ Failed to allow PHPCS plugin"; exit 1; }
-
-  echo "📦 Cleaning bin/phpcs if it exists (to avoid Composer conflicts)"
-  rm -f bin/phpcs || true
-
-  echo "📦 Installing PHPCS-related packages..."
-  composer require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer || { echo "❌ Failed to install PHPCS packages"; exit 1; }
-
-  if [ ! -f ./vendor/bin/phpcs ]; then
-    echo "❌ PHPCS binary not found even after installation"
-    exit 1
-  fi
-  ./vendor/bin/phpcs --version || EXIT_CODE=1
-  ./vendor/bin/phpcs -- -s --colors --standard=Drupal --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
-  ./vendor/bin/phpcs -- -s --colors --standard=DrupalPractice --report-full --report-summary $PHP_CHANGED_FILES || EXIT_CODE=1
+# --- PHP Coding Standards ---
+if [ -n "${PHP_CHANGED_FILES:-}" ]; then
+  echo "➡ PHP Linting..."
+  phpcs -- -s --colors --standard=Drupal --report-full --report-summary $PHP_CHANGED_FILES
+  phpcs -- -s --colors --standard=DrupalPractice --report-full --report-summary $PHP_CHANGED_FILES
 else
-  echo "✅ No PHP files changed"
+  echo "✅ Skipping PHP lint"
 fi
 
-# JS Linting
-if [ -n "$JS_CHANGED_FILES" ]; then
-  echo "🧼 JS Linting on:"
-  echo "$JS_CHANGED_FILES" | tr ' ' '\n'
-  node ./node_modules/eslint/bin/eslint.js --version || EXIT_CODE=1
-  node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $JS_CHANGED_FILES || EXIT_CODE=1
+# --- JavaScript ---
+if [ -n "${JS_CHANGED_FILES:-}" ]; then
+  echo "➡ JS Linting..."
+  node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $JS_CHANGED_FILES
 else
-  echo "✅ No JS files changed"
+  echo "✅ Skipping JS lint"
 fi
 
-# CSS Linting
-if [ -n "$STYLE_CHANGED_FILES" ]; then
-  echo "🧼 CSS Linting on:"
-  echo "$STYLE_CHANGED_FILES" | tr ' ' '\n'
-  node ./node_modules/stylelint/bin/stylelint.mjs --version || EXIT_CODE=1
-  node ./node_modules/stylelint/bin/stylelint.mjs --config ./.stylelintrc.json --color $STYLE_CHANGED_FILES || EXIT_CODE=1
+# --- CSS ---
+if [ -n "${STYLE_CHANGED_FILES:-}" ]; then
+  echo "➡ CSS Linting..."
+  node ./node_modules/stylelint/bin/stylelint.mjs --config ./.stylelintrc.json --color $STYLE_CHANGED_FILES
 else
-  echo "✅ No CSS files changed"
+  echo "✅ Skipping CSS lint"
 fi
 
-# Twig Linting
-if [ -n "$TWIG_CHANGED_FILES" ]; then
-  echo "🧼 Twig Linting on:"
-  echo "$TWIG_CHANGED_FILES" | tr ' ' '\n'
-  composer require --dev vincentlanglet/twig-cs-fixer || { echo "❌ Failed to install twig-cs-fixer"; exit 1; }
-  ./vendor/bin/twig-cs-fixer --version || EXIT_CODE=1
-  ./vendor/bin/twig-cs-fixer lint $TWIG_CHANGED_FILES || EXIT_CODE=1
+# --- Twig ---
+if [ -n "${TWIG_CHANGED_FILES:-}" ]; then
+  echo "➡ Twig Linting..."
+  ./bin/twig-cs-fixer lint $TWIG_CHANGED_FILES
 else
-  echo "✅ No Twig files changed"
+  echo "✅ Skipping Twig lint"
 fi
 
-# Spell Checking
-if [ -n "$TEXT_CHANGED_FILES" ]; then
-  echo "📔 Spell Checking on:"
-  echo "$TEXT_CHANGED_FILES" | tr ' ' '\n'
-  node ./node_modules/cspell/bin.mjs --version || EXIT_CODE=1
-  node ./node_modules/cspell/bin.mjs --config .cspell.json --color $TEXT_CHANGED_FILES || EXIT_CODE=1
+# --- Spell Checking ---
+if [ -n "${TEXT_CHANGED_FILES:-}" ]; then
+  echo "➡ Spell Checking..."
+  node ./node_modules/cspell/bin.mjs --config .cspell.json --color $TEXT_CHANGED_FILES
 else
-  echo "✅ No text/code files changed for spell checking"
+  echo "✅ Skipping spell check"
 fi
 
-echo "✅ Linting finished"
-exit $EXIT_CODE
+echo "🎉 All linting done successfully."
