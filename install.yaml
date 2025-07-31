@@ -15,11 +15,11 @@ project_files:
   - commands/web/utils.sh
 
 post_install_actions:
-  - exec: ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true # Allow PHPCS Dependencies
-  - exec: ddev exec composer require drupal/coder dealerdirect/phpcodesniffer-composer-installer
-  - exec: ddev exec composer config allow-plugins.vincentlanglet/twig-cs-fixer true # Allow TwigCS Dependencies
-  - exec: ddev exec composer require drupal/coder vincentlanglet/twig-cs-fixer
-  - exec: ddev yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install # Core node_modules
+  - exec: "ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true" # Allow PHPCS Dependencies
+  - exec: "ddev exec composer require drupal/coder dealerdirect/phpcodesniffer-composer-installer"
+  - exec: "ddev exec composer config allow-plugins.vincentlanglet/twig-cs-fixer true" # Allow TwigCS Dependencies
+  - exec: "ddev exec composer require drupal/coder vincentlanglet/twig-cs-fixer"
+  - exec: "ddev yarn --modules-folder /var/www/html/node_modules --cwd /var/www/html/docroot/core/ install" # Core node_modules
   - message: "Vardot's DDEV Dev Tools has been installed and configured!"
 
 ddev_version_constraint: '>= v1.24.3'
