@@ -1,26 +1,17 @@
 #!/bin/bash
 
-## Description: Run Stylelint on files
-## Usage: stylelint [--files|-f "file1 file2"] [--all|-a] [--theme theme_name]
-## Example: "ddev stylelint" (checks changed files)
-##          "ddev stylelint -f 'file1.css file2.css'" (checks specific files)
-##          "ddev stylelint --all" (checks all custom files)
-##          "ddev stylelint --theme mytheme" (use specific theme)
+# Fail on errors
+set -euo pipefail
 
-source "${0%/*}/utils.sh"
+# The files to check are passed as arguments to this script
+FILES_TO_CHECK="$@"
 
-THEME=$(get_theme_name "$@") || exit $?
-echo "THEME: $THEME"
-FILES=$(get_files_to_check "css|scss|sass" "$@")
-
-if [ -z "$FILES" ]; then
-    echo "No CSS files to check"
-    exit 0
+if [ -z "$FILES_TO_CHECK" ]; then
+  echo "❌ No files provided to check"
+  exit 1
 fi
 
-yarn --modules-folder /var/www/html/node_modules --cwd "/var/www/html/docroot/themes/custom/${THEME}/" install
+echo "🔍 Running Stylelint on files:"
+echo "$FILES_TO_CHECK" | tr ' ' '\n'
 
-echo "Checking files:"
-echo "$FILES" | tr ' ' '\n'
-
-node ./node_modules/stylelint/bin/stylelint.js --config "/var/www/html/docroot/themes/custom/${THEME}/.stylelintrc.json" --color $FILES
+node ./node_modules/stylelint/bin/stylelint.mjs --config ./.stylelintrc.json --color $FILES_TO_CHECK

@@ -1,25 +1,17 @@
 #!/bin/bash
 
-## Description: Run ESLint on files
-## Usage: eslint [--files|-f "file1 file2"] [--all|-a] [--theme theme_name]
-## Example: "ddev eslint" (checks changed files)
-##          "ddev eslint -f 'file1.js file2.js'" (checks specific files)
-##          "ddev eslint --all" (checks all custom files)
-##          "ddev eslint --theme mytheme" (use specific theme)
+# Fail on errors
+set -euo pipefail
 
-source "${0%/*}/utils.sh"
+# The files to check are passed as arguments to this script
+FILES_TO_CHECK="$@"
 
-THEME=$(get_theme_name "$@") || exit $?
-FILES=$(get_files_to_check "js" "$@")
-
-if [ -z "$FILES" ]; then
-    echo "No JavaScript files to check"
-    exit 0
+if [ -z "$FILES_TO_CHECK" ]; then
+  echo "❌ No files provided to check"
+  exit 1
 fi
 
-yarn --modules-folder /var/www/html/node_modules --cwd "/var/www/html/docroot/themes/custom/${THEME}/" install
+echo "🔍 Running JS Linting on files:"
+echo "$FILES_TO_CHECK" | tr ' ' '\n'
 
-echo "Checking files:"
-echo "$FILES" | tr ' ' '\n'
-
-node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $FILES 
+node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $FILES_TO_CHECK

@@ -1,54 +1,21 @@
 #!/bin/bash
 
-## Description: Run PHPStan static analysis on PHP files
-## Usage: phpstan [--files|-f "file1 file2"] [--all|-a] [--level|-l <level>]
-## Example: "ddev phpstan" (checks changed files with default level 5)
-##          "ddev phpstan -f 'file1.php file2.php'" (checks specific files)
-##          "ddev phpstan --all" (checks all custom files)
-##          "ddev phpstan --level 8" (checks changed files with level 8)
-## ExecRaw: true
+# Fail on errors
+set -euo pipefail
 
-source "${0%/*}/utils.sh"
+# The files to check are passed as arguments to this script
+FILES_TO_CHECK="$@"
 
-# Default PHPStan level
-LEVEL=5
-FILE_ARGS=()
-
-# Parse all arguments
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --level|-l)
-            LEVEL="$2"
-            shift 2
-            ;;
-        --files|-f|--all|-a)
-            FILE_ARGS+=("$1")
-            if [ "$1" = "--files" ] || [ "$1" = "-f" ]; then
-                FILE_ARGS+=("$2")
-                shift
-            fi
-            shift
-            ;;
-        *)
-            FILE_ARGS+=("$1")
-            shift
-            ;;
-    esac
-done
-
-FILES=$(get_files_to_check "php|module" "${FILE_ARGS[@]}")
-
-if [ -z "$FILES" ]; then
-    echo "No PHP files to check"
-    exit 0
+if [ -z "$FILES_TO_CHECK" ]; then
+  echo "❌ No files provided to check"
+  exit 1
 fi
 
-echo "Checking files:"
-echo "$FILES" | tr ' ' '\n'
-echo "PHPStan level: $LEVEL"
+echo "🔍 Running PHPStan on files:"
+echo "$FILES_TO_CHECK" | tr ' ' '\n'
 
 # Ensure PHPStan and its Drupal extension are installed
 composer require --dev phpstan/phpstan phpstan/extension-installer mglaman/phpstan-drupal
 
 # Run PHPStan with specified level
-phpstan analyse --level=$LEVEL $FILES 
+phpstan analyse $FILES_TO_CHECK

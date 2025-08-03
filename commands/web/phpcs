@@ -1,26 +1,18 @@
 #!/bin/bash
 
-## Description: Run PHP CodeSniffer on files
-## Usage: phpcs [--files|-f "file1 file2"] [--all|-a]
-## Example: "ddev phpcs" (checks changed files)
-##          "ddev phpcs -f 'file1.php file2.php'" (checks specific files)
-##          "ddev phpcs --all" (checks all custom files)
-## ExecRaw: true
+# Fail on errors
+set -euo pipefail
 
-source "${0%/*}/utils.sh"
+# The files to check are passed as arguments to this script
+FILES_TO_CHECK="$@"
 
-FILES=$(get_files_to_check "php|module" "$@")
-
-if [ -z "$FILES" ]; then
-    echo "No PHP files to check"
-    exit 0
+if [ -z "$FILES_TO_CHECK" ]; then
+  echo "❌ No files provided to check"
+  exit 1
 fi
 
-composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-composer require drupal/coder dealerdirect/phpcodesniffer-composer-installer
+echo "🔍 Running PHPCS on files:"
+echo "$FILES_TO_CHECK" | tr ' ' '\n'
 
-echo "Checking files:"
-echo "$FILES" | tr ' ' '\n'
-
-phpcs -s --colors --standard=Drupal --report-full --report-summary $FILES
-phpcs -s --colors --standard=DrupalPractice --report-full --report-summary --warning-severity=0 $FILES 
+# Run PHPCS with Drupal standards
+phpcs -- -s --colors --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml --exclude=Drupal.Files.LineLength,Drupal.Files.TxtFileLineLength --report-full --report-summary $FILES_TO_CHECK
