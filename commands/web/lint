@@ -8,6 +8,18 @@ set -euo pipefail
 
 echo "🔍 Running linters..."
 
+if [ "${IS_CI:-false}" = "TRUE" ]; then
+  echo "📋 Running in CI environment - using predefined changed files"
+else
+  echo "🖥 Running locally - detecting changed files"
+  # Get changed files in local environment
+  PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ' || true)
+  JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ' || true)
+  STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ' || true)
+  TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ' || true)
+  TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ' || true)
+fi
+
 # --- PHP Coding Standards ---
 if [ -n "${PHP_CHANGED_FILES:-}" ]; then
   echo "➡ PHP Linting..."
