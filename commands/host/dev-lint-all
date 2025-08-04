@@ -2,36 +2,76 @@
 
 ## #ddev-generated
 ## Description: Run all linting tools on custom modules and themes files
-## Fail on errors
-set -euo pipefail
+set -uo pipefail
+
+# Track if any linter failed
+LINT_STATUS=0
 
 # Default files pattern if no arguments provided
 if [ $# -eq 0 ]; then
-  # Find all custom PHP, JS, CSS, and Twig files
-  FILES=$(find docroot/modules/custom docroot/themes/custom \
-    -type f \( \
-    -name "*.php" -o \
-    -name "*.module" -o \
-    -name "*.css" -o \
-    -name "*.js" -o \
-    -name "*.twig" \
-    \) -print0 | xargs -0)
-  set -- "--files" "$FILES"
+  # Find all custom files by type
+  PHP_FILES=$(find docroot/modules/custom docroot/themes/custom \
+    -type f \( -name "*.php" -o -name "*.module" \) -print0 | xargs -0)
+
+  JS_FILES=$(find docroot/modules/custom docroot/themes/custom \
+    -type f -name "*.js" -print0 | xargs -0)
+
+  CSS_FILES=$(find docroot/modules/custom docroot/themes/custom \
+    -type f -name "*.css" -print0 | xargs -0)
+
+  TWIG_FILES=$(find docroot/modules/custom docroot/themes/custom \
+    -type f -name "*.twig" -print0 | xargs -0)
+else
+  # If files are provided as arguments, filter them by extension
+  PHP_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.(php|module)$' | tr '\n' ' ' || true)
+  JS_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.js$' | tr '\n' ' ' || true)
+  CSS_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.css$' | tr '\n' ' ' || true)
+  TWIG_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.twig$' | tr '\n' ' ' || true)
 fi
 
 echo "Running all linting tools..."
 
-echo -e "\n🔍 Running PHP CodeSniffer..."
-ddev dev-phpcs "$@" || exit $?
+# Only run PHPCS if PHP files are found
+if [ -n "${PHP_FILES:-}" ]; then
+  if ! ddev dev-phpcs $PHP_FILES; then
+    LINT_STATUS=1
+  fi
+else
+  echo -e "\n⏩ No PHP files to check"
+fi
 
-echo -e "\n🔍 Running ESLint..."
-ddev dev-eslint "$@" || exit $?
+# Only run ESLint if JS files are found
+if [ -n "${JS_FILES:-}" ]; then
+  if ! ddev dev-eslint $JS_FILES; then
+    LINT_STATUS=1
+  fi
+else
+  echo -e "\n⏩ No JavaScript files to check"
+fi
 
-echo -e "\n🔍 Running Stylelint..."
-ddev dev-stylelint "$@" || exit $?
+# Only run Stylelint if CSS files are found
+if [ -n "${CSS_FILES:-}" ]; then
+  if ! ddev dev-stylelint $CSS_FILES; then
+    LINT_STATUS=1
+  fi
+else
+  echo -e "\n⏩ No CSS files to check"
+fi
 
-echo -e "\n🔍 Running TwigCS Fixer..."
-ddev dev-twigcs "$@" || exit $?
+# Only run TwigCS if Twig files are found
+if [ -n "${TWIG_FILES:-}" ]; then
+  if ! ddev dev-twigcs $TWIG_FILES; then
+    LINT_STATUS=1
+  fi
+else
+  echo -e "\n⏩ No Twig files to check"
+fi
 
-echo -e "\n🔍 Running PHPStan..."
-ddev dev-phpstan "$@" || exit $?
+# Report final status
+if [ $LINT_STATUS -eq 1 ]; then
+  echo -e "\n❌ Some linting checks failed"
+else
+  echo -e "\n✅ All linting checks passed"
+fi
+
+exit $LINT_STATUS

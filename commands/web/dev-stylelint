@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ## #ddev-generated
+## Description: Run Stylelint on custom CSS files
 # Fail on errors
 set -euo pipefail
 

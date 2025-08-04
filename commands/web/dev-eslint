@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ## #ddev-generated
+## Description: Run ESLint on custom JS files
 # Fail on errors
 set -euo pipefail
 

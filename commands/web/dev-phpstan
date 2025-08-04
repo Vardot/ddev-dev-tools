@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ## #ddev-generated
+## Description: Run PHPStan on custom modules and themes files
 # Fail on errors
 set -euo pipefail
 

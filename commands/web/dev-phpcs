@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ## #ddev-generated
+## Description: Run PHPCS on custom modules and themes files (.php and .module files)
 # Fail on errors
 set -euo pipefail
 
