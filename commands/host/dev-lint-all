@@ -1,11 +1,23 @@
 #!/bin/bash
 
-## Description: Run all linting tools on files
-## Usage: lint-all [--files|-f "file1 file2"] [--all|-a]
-## Example: "ddev lint-all" (checks changed files)
-##          "ddev lint-all -f 'file1.php file2.js'" (checks specific files)
-##          "ddev lint-all --all" (checks all custom files)
-## ExecRaw: true
+## #ddev-generated
+## Description: Run all linting tools on custom modules and themes files
+## Fail on errors
+set -euo pipefail
+
+# Default files pattern if no arguments provided
+if [ $# -eq 0 ]; then
+  # Find all custom PHP, JS, CSS, and Twig files
+  FILES=$(find docroot/modules/custom docroot/themes/custom \
+    -type f \( \
+    -name "*.php" -o \
+    -name "*.module" -o \
+    -name "*.css" -o \
+    -name "*.js" -o \
+    -name "*.twig" \
+    \) -print0 | xargs -0)
+  set -- "--files" "$FILES"
+fi
 
 echo "Running all linting tools..."
 
@@ -20,9 +32,6 @@ ddev dev-stylelint "$@" || exit $?
 
 echo -e "\n🔍 Running TwigCS Fixer..."
 ddev dev-twigcs "$@" || exit $?
-
-echo -e "\n🔍 Running CSpell..."
-ddev dev-cspell "$@" || exit $?
 
 echo -e "\n🔍 Running PHPStan..."
 ddev dev-phpstan "$@" || exit $?

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+## #ddev-generated
 # Fail on:
 # -e : any command fails
 # -u : undefined variables

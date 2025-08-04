@@ -1,4 +1,6 @@
 #!/bin/bash
+## #ddev-generated
+
 set -euo pipefail  # Exit on errors and undefined variables
 
 ## Description: Install Drupal using existing configuration
