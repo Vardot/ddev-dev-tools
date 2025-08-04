@@ -1,18 +1,14 @@
 name: dev-tools
 
 project_files:
-  - commands/host/install-drupal
-  - commands/host/lint-all
-  - commands/web/cspell
-  - commands/web/eslint
-  - commands/web/install-drupal
-  - commands/web/lint
-  - commands/web/phpcs
-  - commands/web/phpstan
-  - commands/web/stylelint
-  - commands/web/thin-db-export
-  - commands/web/twigcs
-  - commands/web/utils.sh
+  - commands/host/dev-lint-all
+  - commands/web/dev-cspell
+  - commands/web/dev-eslint
+  - commands/web/dev-lint
+  - commands/web/dev-phpcs
+  - commands/web/dev-phpstan
+  - commands/web/dev-stylelint
+  - commands/web/dev-twigcs
 
 post_install_actions:
   - ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true

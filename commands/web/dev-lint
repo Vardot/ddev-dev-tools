@@ -24,7 +24,7 @@ fi
 if [ -n "${PHP_CHANGED_FILES:-}" ]; then
   echo "➡ PHP Linting..."
   echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/phpcs $PHP_CHANGED_FILES
+  .ddev/commands/web/dev-phpcs $PHP_CHANGED_FILES
 else
   echo "✅ Skipping PHP lint"
 fi
@@ -33,7 +33,7 @@ fi
 if [ -n "${JS_CHANGED_FILES:-}" ]; then
   echo "➡ JS Linting..."
   echo "$JS_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/eslint $JS_CHANGED_FILES
+  .ddev/commands/web/dev-eslint $JS_CHANGED_FILES
 else
   echo "✅ Skipping JS lint"
 fi
@@ -42,7 +42,7 @@ fi
 if [ -n "${STYLE_CHANGED_FILES:-}" ]; then
   echo "➡ CSS Linting..."
   echo "$STYLE_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/stylelint $STYLE_CHANGED_FILES
+  .ddev/commands/web/dev-stylelint $STYLE_CHANGED_FILES
 else
   echo "✅ Skipping CSS lint"
 fi
@@ -51,7 +51,7 @@ fi
 if [ -n "${TWIG_CHANGED_FILES:-}" ]; then
   echo "➡ Twig Linting..."
   echo "$TWIG_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/twigcs $TWIG_CHANGED_FILES
+  .ddev/commands/web/dev-twigcs $TWIG_CHANGED_FILES
 else
   echo "✅ Skipping Twig lint"
 fi
@@ -60,7 +60,7 @@ fi
 if [ -n "${TEXT_CHANGED_FILES:-}" ]; then
   echo "➡ Spell Checking..."
   echo "$TEXT_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/cspell $TEXT_CHANGED_FILES
+  .ddev/commands/web/dev-cspell $TEXT_CHANGED_FILES
 else
   echo "✅ Skipping spell check"
 fi

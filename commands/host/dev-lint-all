@@ -10,19 +10,19 @@
 echo "Running all linting tools..."
 
 echo -e "\n🔍 Running PHP CodeSniffer..."
-ddev phpcs "$@" || exit $?
+ddev dev-phpcs "$@" || exit $?
 
 echo -e "\n🔍 Running ESLint..."
-ddev eslint "$@" || exit $?
+ddev dev-eslint "$@" || exit $?
 
 echo -e "\n🔍 Running Stylelint..."
-ddev stylelint "$@" || exit $?
+ddev dev-stylelint "$@" || exit $?
 
-echo -e "\n🔍 Running Twig CS Fixer..."
-ddev twigcs "$@" || exit $?
+echo -e "\n🔍 Running TwigCS Fixer..."
+ddev dev-twigcs "$@" || exit $?
 
 echo -e "\n🔍 Running CSpell..."
-ddev cspell "$@" || exit $?
+ddev dev-cspell "$@" || exit $?
 
 echo -e "\n🔍 Running PHPStan..."
-ddev phpstan "$@" || exit $?
+ddev dev-phpstan "$@" || exit $?
