@@ -6,9 +6,6 @@
 This addon includes commonly used DDEV commands for Drupal development:
 
 - 🧹 Linting: `eslint`, `stylelint`, `phpcs`, `phpstan`, `cspell`, `twigcs`
-- 🛠️ Install: `install-drupal`
-- 📦 Export: `thin-db-export`
-- 🔄 Scripts: `utils.sh`
 
 ## Installation
 
@@ -20,7 +17,7 @@ ddev restart
 ## Usage
 
 ```bash
-ddev lint-all
-ddev install-drupal
-ddev thin-db-export
+ddev dev-lint
+ddev dev-phpcs <file-name> <file-name>
+ddev dev-stylelint <file-name> <file-name>
 ```
