@@ -3,68 +3,106 @@
 ## #ddev-generated
 ## Description: Run all linting tools on changed custom modules and themes files
 # Fail on:
-# -e : any command fails
 # -u : undefined variables
 # -o pipefail : failure in a pipeline propagates
-set -euo pipefail
+# Usage: ddev dev-lint
+#        In CI environment: Uses predefined changed files
+#        In local environment: Uses git diff to detect changes
+
+set -uo pipefail
+
+# Track overall linting status
+LINT_STATUS=0
 
 echo "🔍 Running linters..."
 
 if [ "${IS_CI:-false}" = "TRUE" ]; then
-  echo "📋 Running in CI environment - using predefined changed files"
+    echo "📋 Running in CI environment - using predefined changed files"
+
+    # Run each tool with predefined files if available
+    if [ -n "${PHP_CHANGED_FILES:-}" ]; then
+        echo "➡ PHP Linting..."
+        echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
+        if ! .ddev/commands/web/dev-phpcs --files="$PHP_CHANGED_FILES"; then
+            LINT_STATUS=1
+        fi
+    else
+        echo "✅ Skipping PHP lint"
+    fi
+
+    if [ -n "${JS_CHANGED_FILES:-}" ]; then
+        echo "➡ JS Linting..."
+        echo "$JS_CHANGED_FILES" | tr ' ' '\n'
+        if ! .ddev/commands/web/dev-eslint --files="$JS_CHANGED_FILES"; then
+            LINT_STATUS=1
+        fi
+    else
+        echo "✅ Skipping JS lint"
+    fi
+
+    if [ -n "${STYLE_CHANGED_FILES:-}" ]; then
+        echo "➡ CSS Linting..."
+        echo "$STYLE_CHANGED_FILES" | tr ' ' '\n'
+        if ! .ddev/commands/web/dev-stylelint --files="$STYLE_CHANGED_FILES"; then
+            LINT_STATUS=1
+        fi
+    else
+        echo "✅ Skipping CSS lint"
+    fi
+
+    if [ -n "${TWIG_CHANGED_FILES:-}" ]; then
+        echo "➡ Twig Linting..."
+        echo "$TWIG_CHANGED_FILES" | tr ' ' '\n'
+        if ! .ddev/commands/web/dev-twigcs --files="$TWIG_CHANGED_FILES"; then
+            LINT_STATUS=1
+        fi
+    else
+        echo "✅ Skipping Twig lint"
+    fi
+
+    if [ -n "${TEXT_CHANGED_FILES:-}" ]; then
+        echo "➡ Spell Checking..."
+        echo "$TEXT_CHANGED_FILES" | tr ' ' '\n'
+        if ! .ddev/commands/web/dev-cspell --files="$TEXT_CHANGED_FILES"; then
+            LINT_STATUS=1
+        fi
+    else
+        echo "✅ Skipping spell check"
+    fi
 else
-  echo "🖥 Running locally - detecting changed files"
-  # Get changed files in local environment
-  PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ' || true)
-  JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ' || true)
-  STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ' || true)
-  TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ' || true)
-  TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ' || true)
+    echo "🖥 Running locally - using git diff"
+
+    # Run each tool without parameters to use git diff
+    echo "➡ PHP Linting..."
+    if ! .ddev/commands/web/dev-phpcs; then
+        LINT_STATUS=1
+    fi
+
+    echo "➡ JS Linting..."
+    if ! .ddev/commands/web/dev-eslint; then
+        LINT_STATUS=1
+    fi
+
+    echo "➡ CSS Linting..."
+    if ! .ddev/commands/web/dev-stylelint; then
+        LINT_STATUS=1
+    fi
+
+    echo "➡ Twig Linting..."
+    if ! .ddev/commands/web/dev-twigcs; then
+        LINT_STATUS=1
+    fi
+
+    echo "➡ Spell Checking..."
+    if ! .ddev/commands/web/dev-cspell; then
+        LINT_STATUS=1
+    fi
 fi
 
-# --- PHP Coding Standards ---
-if [ -n "${PHP_CHANGED_FILES:-}" ]; then
-  echo "➡ PHP Linting..."
-  echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/dev-phpcs $PHP_CHANGED_FILES
+if [ $LINT_STATUS -eq 0 ]; then
+    echo "✅ All linting completed successfully!"
+    exit 0
 else
-  echo "✅ Skipping PHP lint"
+    echo "❌ Some linting checks failed"
+    exit 1
 fi
-
-# --- JavaScript ---
-if [ -n "${JS_CHANGED_FILES:-}" ]; then
-  echo "➡ JS Linting..."
-  echo "$JS_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/dev-eslint $JS_CHANGED_FILES
-else
-  echo "✅ Skipping JS lint"
-fi
-
-# --- CSS ---
-if [ -n "${STYLE_CHANGED_FILES:-}" ]; then
-  echo "➡ CSS Linting..."
-  echo "$STYLE_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/dev-stylelint $STYLE_CHANGED_FILES
-else
-  echo "✅ Skipping CSS lint"
-fi
-
-# --- Twig ---
-if [ -n "${TWIG_CHANGED_FILES:-}" ]; then
-  echo "➡ Twig Linting..."
-  echo "$TWIG_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/dev-twigcs $TWIG_CHANGED_FILES
-else
-  echo "✅ Skipping Twig lint"
-fi
-
-# --- Spell Checking ---
-if [ -n "${TEXT_CHANGED_FILES:-}" ]; then
-  echo "➡ Spell Checking..."
-  echo "$TEXT_CHANGED_FILES" | tr ' ' '\n'
-  .ddev/commands/web/dev-cspell $TEXT_CHANGED_FILES
-else
-  echo "✅ Skipping spell check"
-fi
-
-echo "🎉 All linting done successfully."

@@ -7,71 +7,43 @@ set -uo pipefail
 # Track if any linter failed
 LINT_STATUS=0
 
-# Default files pattern if no arguments provided
-if [ $# -eq 0 ]; then
-  # Find all custom files by type
-  PHP_FILES=$(find docroot/modules/custom docroot/themes/custom \
-    -type f \( -name "*.php" -o -name "*.module" \) -print0 | xargs -0)
+echo "🔍 Running all linting tools..."
 
-  JS_FILES=$(find docroot/modules/custom docroot/themes/custom \
-    -type f -name "*.js" -print0 | xargs -0)
-
-  CSS_FILES=$(find docroot/modules/custom docroot/themes/custom \
-    -type f -name "*.css" -print0 | xargs -0)
-
-  TWIG_FILES=$(find docroot/modules/custom docroot/themes/custom \
-    -type f -name "*.twig" -print0 | xargs -0)
-else
-  # If files are provided as arguments, filter them by extension
-  PHP_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.(php|module)$' | tr '\n' ' ' || true)
-  JS_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.js$' | tr '\n' ' ' || true)
-  CSS_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.css$' | tr '\n' ' ' || true)
-  TWIG_FILES=$(echo "$@" | tr ' ' '\n' | grep -E '\.twig$' | tr '\n' ' ' || true)
+# Run PHPCS on all PHP files
+echo -e "\n➡ Running PHP CodeSniffer..."
+if ! ddev dev-phpcs --all; then
+    LINT_STATUS=1
 fi
 
-echo "Running all linting tools..."
-
-# Only run PHPCS if PHP files are found
-if [ -n "${PHP_FILES:-}" ]; then
-  if ! ddev dev-phpcs $PHP_FILES; then
+# Run ESLint on all JS files
+echo -e "\n➡ Running ESLint..."
+if ! ddev dev-eslint --all; then
     LINT_STATUS=1
-  fi
-else
-  echo -e "\n⏩ No PHP files to check"
 fi
 
-# Only run ESLint if JS files are found
-if [ -n "${JS_FILES:-}" ]; then
-  if ! ddev dev-eslint $JS_FILES; then
+# Run Stylelint on all CSS files
+echo -e "\n➡ Running Stylelint..."
+if ! ddev dev-stylelint --all; then
     LINT_STATUS=1
-  fi
-else
-  echo -e "\n⏩ No JavaScript files to check"
 fi
 
-# Only run Stylelint if CSS files are found
-if [ -n "${CSS_FILES:-}" ]; then
-  if ! ddev dev-stylelint $CSS_FILES; then
+# Run TwigCS on all Twig files
+echo -e "\n➡ Running TwigCS..."
+if ! ddev dev-twigcs --all; then
     LINT_STATUS=1
-  fi
-else
-  echo -e "\n⏩ No CSS files to check"
 fi
 
-# Only run TwigCS if Twig files are found
-if [ -n "${TWIG_FILES:-}" ]; then
-  if ! ddev dev-twigcs $TWIG_FILES; then
+# Run CSpell on all files
+echo -e "\n➡ Running CSpell..."
+if ! ddev dev-cspell --all; then
     LINT_STATUS=1
-  fi
-else
-  echo -e "\n⏩ No Twig files to check"
 fi
 
 # Report final status
 if [ $LINT_STATUS -eq 1 ]; then
-  echo -e "\n❌ Some linting checks failed"
+    echo -e "\n❌ Some linting checks failed"
 else
-  echo -e "\n✅ All linting checks passed"
+    echo -e "\n✅ All linting checks passed"
 fi
 
 exit $LINT_STATUS

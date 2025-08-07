@@ -1,19 +1,35 @@
 #!/bin/bash
 
+source "${0%/*}/file_utils.sh"
+
 ## #ddev-generated
-# Description: Run TwigCS Fixer on custom modules and themes files
-# Fail on errors
+## Description: Run TwigCS Fixer on Twig files
+# Usage: ddev dev-twigcs [--all] [--files=file1.twig,file2.twig]
+# Example: "ddev dev-twigcs" (checks git diff)
+#          "ddev dev-twigcs --all" (checks all Twig files)
+#          "ddev dev-twigcs --files=file1.twig,file2.twig" (checks specific files)
+
 set -euo pipefail
 
-# The files to check are passed as arguments to this script
-FILES_TO_CHECK="$@"
+# Define extensions for Twig files
+EXTENSIONS=("twig")
 
-if [ -z "$FILES_TO_CHECK" ]; then
-  echo "❌ No files provided to check"
-  exit 1
+# Get files based on extensions and arguments
+if [ $# -eq 0 ]; then
+    # No arguments - use git diff
+    FILES=$(get_files "${EXTENSIONS[@]}")
+else
+    # Pass all arguments to get_files along with extensions
+    FILES=$(get_files "${EXTENSIONS[@]}" "$@")
+fi
+
+if [ -z "${FILES:-}" ]; then
+    echo "❌ No Twig files to check"
+    exit 0
 fi
 
 echo "🔍 Running TwigCS Fixer on files:"
-echo "$FILES_TO_CHECK" | tr ' ' '\n'
+echo "$FILES" | tr ' ' '\n'
 
-./bin/twig-cs-fixer lint $FILES_TO_CHECK
+# Run TwigCS Fixer
+./bin/twig-cs-fixer lint $FILES

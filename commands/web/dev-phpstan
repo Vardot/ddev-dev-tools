@@ -1,23 +1,38 @@
 #!/bin/bash
 
+source "${0%/*}/file_utils.sh"
+
 ## #ddev-generated
-## Description: Run PHPStan on custom modules and themes files
-# Fail on errors
+## Description: Run PHPStan on PHP files
+# Usage: ddev dev-phpstan [--all] [--files=file1.php,file2.module]
+# Example: "ddev dev-phpstan" (checks git diff)
+#          "ddev dev-phpstan --all" (checks all PHP files)
+#          "ddev dev-phpstan --files=file1.php,file2.module" (checks specific files)
+
 set -euo pipefail
 
-# The files to check are passed as arguments to this script
-FILES_TO_CHECK="$@"
+# Define extensions for PHP files
+EXTENSIONS=("php" "module")
 
-if [ -z "$FILES_TO_CHECK" ]; then
-  echo "❌ No files provided to check"
-  exit 1
+# Get files based on extensions and arguments
+if [ $# -eq 0 ]; then
+    # No arguments - use git diff
+    FILES=$(get_files "${EXTENSIONS[@]}")
+else
+    # Pass all arguments to get_files along with extensions
+    FILES=$(get_files "${EXTENSIONS[@]}" "$@")
+fi
+
+if [ -z "${FILES:-}" ]; then
+    echo "❌ No PHP files to check"
+    exit 0
 fi
 
 echo "🔍 Running PHPStan on files:"
-echo "$FILES_TO_CHECK" | tr ' ' '\n'
+echo "$FILES" | tr ' ' '\n'
 
 # Ensure PHPStan and its Drupal extension are installed
 composer require --dev phpstan/phpstan phpstan/extension-installer mglaman/phpstan-drupal
 
 # Run PHPStan with specified level
-phpstan analyse $FILES_TO_CHECK
+phpstan analyse $FILES

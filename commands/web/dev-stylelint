@@ -1,19 +1,34 @@
 #!/bin/bash
 
+source "${0%/*}/file_utils.sh"
+
 ## #ddev-generated
-## Description: Run Stylelint on custom CSS files
-# Fail on errors
+## Description: Run Stylelint on CSS files
+# Usage: ddev dev-stylelint [--all] [--files=file1.css,file2.css]
+# Example: "ddev dev-stylelint" (checks git diff)
+#          "ddev dev-stylelint --all" (checks all CSS files)
+#          "ddev dev-stylelint --files=file1.css,file2.css" (checks specific files)
+
 set -euo pipefail
 
-# The files to check are passed as arguments to this script
-FILES_TO_CHECK="$@"
+# Define extensions for CSS files
+EXTENSIONS=("css")
 
-if [ -z "$FILES_TO_CHECK" ]; then
-  echo "❌ No files provided to check"
-  exit 1
+# Get files based on extensions and arguments
+if [ $# -eq 0 ]; then
+    # No arguments - use git diff
+    FILES=$(get_files "${EXTENSIONS[@]}")
+else
+    # Pass all arguments to get_files along with extensions
+    FILES=$(get_files "${EXTENSIONS[@]}" "$@")
+fi
+
+if [ -z "${FILES:-}" ]; then
+    echo "❌ No CSS files to check"
+    exit 0
 fi
 
 echo "🔍 Running Stylelint on files:"
-echo "$FILES_TO_CHECK" | tr ' ' '\n'
+echo "$FILES" | tr ' ' '\n'
 
-node ./node_modules/stylelint/bin/stylelint.mjs --config ./.stylelintrc.json --color $FILES_TO_CHECK
+node ./node_modules/stylelint/bin/stylelint.mjs --config docroot/core/.stylelintrc.json --color $FILES_TO_CHECK

@@ -1,20 +1,56 @@
 #!/bin/bash
 
+source "${0%/*}/file_utils.sh"
+
 ## #ddev-generated
-## Description: Run PHPCS on custom modules and themes files (.php and .module files)
-# Fail on errors
+## Description: Run PHPCS on PHP files
+# Usage: ddev dev-phpcs [--all] [--files=file1.php,file2.module]
+# Example: "ddev dev-phpcs" (checks git diff)
+#          "ddev dev-phpcs --all" (checks all PHP files)
+#          "ddev dev-phpcs --files=file1.php,file2.module" (checks specific files)
+
 set -euo pipefail
 
-# The files to check are passed as arguments to this script
-FILES_TO_CHECK="$@"
+# Define extensions for PHP files
+# Default extensions for PHP files
+DEFAULT_EXTENSIONS=("php" "module")
+EXTENSIONS=()
 
-if [ -z "$FILES_TO_CHECK" ]; then
-  echo "❌ No files provided to check"
-  exit 1
+# Parse arguments for extensions
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ext=*)
+            # Split extensions by comma and create array
+            IFS=',' read -r -a EXTENSIONS <<< "${1#--ext=}"
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+# Use default extensions if none specified
+if [ ${#EXTENSIONS[@]} -eq 0 ]; then
+    EXTENSIONS=("${DEFAULT_EXTENSIONS[@]}")
 fi
 
-echo "🔍 Running PHPCS on files:"
-echo "$FILES_TO_CHECK" | tr ' ' '\n'
+# Get files based on extensions and arguments
+if [ $# -eq 0 ]; then
+    # No arguments - use git diff
+    FILES=$(get_files "${EXTENSIONS[@]}")
+else
+    # Pass all arguments to get_files along with extensions
+    FILES=$(get_files "${EXTENSIONS[@]}" "$@")
+fi
+
+if [ -z "${FILES:-}" ]; then
+    echo "❌ No files to check"
+    exit 0
+fi
+
+echo "Files to check:"
+echo "$FILES" | tr ' ' '\n'
 
 # Run PHPCS with Drupal standards
-phpcs -- -s --colors --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml --exclude=Drupal.Files.LineLength,Drupal.Files.TxtFileLineLength --report-full --report-summary $FILES_TO_CHECK
+phpcs -- -s --colors --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml --exclude=Drupal.Files.LineLength,Drupal.Files.TxtFileLineLength --report-full --report-summary $FILES

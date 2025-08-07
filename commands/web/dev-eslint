@@ -1,19 +1,35 @@
 #!/bin/bash
 
+source "${0%/*}/file_utils.sh"
+
 ## #ddev-generated
-## Description: Run ESLint on custom JS files
-# Fail on errors
+## Description: Run ESLint on JS files
+# Usage: ddev dev-eslint [--all] [--files=file1.js,file2.js]
+# Example: "ddev dev-eslint" (checks git diff)
+#          "ddev dev-eslint --all" (checks all JS files)
+#          "ddev dev-eslint --files=file1.js,file2.js" (checks specific files)
+
 set -euo pipefail
 
-# The files to check are passed as arguments to this script
-FILES_TO_CHECK="$@"
+# Define extensions for JS files
+EXTENSIONS=("js")
 
-if [ -z "$FILES_TO_CHECK" ]; then
-  echo "❌ No files provided to check"
-  exit 1
+# Get files based on extensions and arguments
+if [ $# -eq 0 ]; then
+    # No arguments - use git diff
+    FILES=$(get_files "${EXTENSIONS[@]}")
+else
+    # Pass all arguments to get_files along with extensions
+    FILES=$(get_files "${EXTENSIONS[@]}" "$@")
 fi
 
-echo "🔍 Running JS Linting on files:"
-echo "$FILES_TO_CHECK" | tr ' ' '\n'
+if [ -z "${FILES:-}" ]; then
+    echo "❌ No files to check"
+    exit 0
+fi
 
-node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $FILES_TO_CHECK
+echo "Files to check:"
+echo "$FILES" | tr ' ' '\n'
+
+# Run ESLint
+node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $FILES
