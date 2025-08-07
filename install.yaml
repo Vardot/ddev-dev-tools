@@ -9,6 +9,7 @@ project_files:
   - commands/web/dev-phpstan
   - commands/web/dev-stylelint
   - commands/web/dev-twigcs
+  - commands/web/file_utils.sh
 
 post_install_actions:
   - ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
