@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "${0%/*}/file_utils.sh"
+source "${0%/*}/utils.sh"
 
 ## #ddev-generated
 ## Description: Run ESLint on JS files

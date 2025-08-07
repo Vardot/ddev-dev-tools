@@ -70,31 +70,49 @@ if [ "${IS_CI:-false}" = "TRUE" ]; then
         echo "✅ Skipping spell check"
     fi
 else
-    echo "🖥 Running locally - using git diff"
+    echo "🖥 Running locally"
 
-    # Run each tool without parameters to use git diff
+    # Parse command line arguments
+    if [ "$#" -gt 0 ]; then
+        case "$1" in
+            --all)
+                echo "🔍 Checking all files..."
+                ARGS="--all"
+                ;;
+            *)
+                echo "❌ Unknown option: $1"
+                echo "Usage: ddev dev-lint [--all]"
+                exit 1
+                ;;
+        esac
+    else
+        echo "🔍 Using git diff..."
+        ARGS=""
+    fi
+
+    # Run each tool with the same arguments
     echo "➡ PHP Linting..."
-    if ! .ddev/commands/web/dev-phpcs; then
+    if ! .ddev/commands/web/dev-phpcs $ARGS; then
         LINT_STATUS=1
     fi
 
     echo "➡ JS Linting..."
-    if ! .ddev/commands/web/dev-eslint; then
+    if ! .ddev/commands/web/dev-eslint $ARGS; then
         LINT_STATUS=1
     fi
 
     echo "➡ CSS Linting..."
-    if ! .ddev/commands/web/dev-stylelint; then
+    if ! .ddev/commands/web/dev-stylelint $ARGS; then
         LINT_STATUS=1
     fi
 
     echo "➡ Twig Linting..."
-    if ! .ddev/commands/web/dev-twigcs; then
+    if ! .ddev/commands/web/dev-twigcs $ARGS; then
         LINT_STATUS=1
     fi
 
     echo "➡ Spell Checking..."
-    if ! .ddev/commands/web/dev-cspell; then
+    if ! .ddev/commands/web/dev-cspell $ARGS; then
         LINT_STATUS=1
     fi
 fi

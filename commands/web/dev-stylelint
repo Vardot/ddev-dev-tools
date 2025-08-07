@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "${0%/*}/file_utils.sh"
+source "${0%/*}/utils.sh"
 
 ## #ddev-generated
 ## Description: Run Stylelint on CSS files
@@ -31,4 +31,4 @@ fi
 echo "🔍 Running Stylelint on files:"
 echo "$FILES" | tr ' ' '\n'
 
-node ./node_modules/stylelint/bin/stylelint.mjs --config docroot/core/.stylelintrc.json --color $FILES_TO_CHECK
+node ./node_modules/stylelint/bin/stylelint.mjs --config docroot/core/.stylelintrc.json --color $FILES
