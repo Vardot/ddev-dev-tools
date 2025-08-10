@@ -1,5 +1,8 @@
 #!/bin/bash
 
+## #ddev-generated
+# Description: Utility functions for file handling in DDEV commands
+
 # Function to get changed files based on extensions
 get_changed_files() {
     local extensions=("$@")

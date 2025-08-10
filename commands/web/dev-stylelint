@@ -31,4 +31,4 @@ fi
 echo "🔍 Running Stylelint on files:"
 echo "$FILES" | tr ' ' '\n'
 
-node ./node_modules/stylelint/bin/stylelint.mjs --config docroot/core/.stylelintrc.json --color $FILES
+node docroot/core/node_modules/stylelint/bin/stylelint.mjs --config docroot/core/.stylelintrc.json --color $FILES

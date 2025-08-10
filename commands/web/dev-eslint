@@ -32,4 +32,4 @@ echo "Files to check:"
 echo "$FILES" | tr ' ' '\n'
 
 # Run ESLint
-node ./node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $FILES
+node docroot/core/node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $FILES
