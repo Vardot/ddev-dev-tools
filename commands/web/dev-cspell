@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "${0%/*}/utils.sh"
+source "${0%/*}/dev-utils.sh"
 
 ## #ddev-generated
 ## Description: Run CSpell on custom modules and themes files
