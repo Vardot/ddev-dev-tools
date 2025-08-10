@@ -88,17 +88,81 @@ ddev dev-lint-all    # Run all linters on all files
 ddev dev-phpcs --ext=php,module,inc
 ```
 
-### CI/CD Environment
+### CI/CD Integration 🔄
 
-In CI environments, set the following variables:
-- `IS_CI=TRUE`
-- `PHP_CHANGED_FILES`: List of PHP files to check
-- `JS_CHANGED_FILES`: List of JavaScript files to check
-- `STYLE_CHANGED_FILES`: List of CSS files to check
-- `TWIG_CHANGED_FILES`: List of Twig files to check
-- `TEXT_CHANGED_FILES`: List of text files to check
+This addon supports various CI/CD platforms including BitBucket Pipelines, GitHub Actions, Azure DevOps, and GitLab CI.
 
-Example:
+#### Option 1: Environment Variables
+
+Set these variables in your CI environment:
 ```bash
-IS_CI=TRUE PHP_CHANGED_FILES="file1.php,file2.module" ddev dev-lint
+IS_CI=TRUE
+PHP_CHANGED_FILES="file1.php,file2.module"
+JS_CHANGED_FILES="file1.js,file2.js"
+STYLE_CHANGED_FILES="file1.css,file2.css"
+TWIG_CHANGED_FILES="file1.twig,file2.twig"
+TEXT_CHANGED_FILES="file1.md,file2.txt"
+```
+
+#### Option 2: Configuration File
+
+1. Create a pipeline configuration file:
+```bash
+cp config.pipeline.yaml.example .ddev/config.pipeline.yaml
+```
+
+2. Or generate it dynamically in your pipeline:
+
+**BitBucket Pipelines**
+```yaml
+steps:
+  - step:
+      script:
+        - |
+          cat > .ddev/config.pipeline.yaml << EOF
+          web_environment:
+            - IS_CI=TRUE
+            - PHP_CHANGED_FILES=${PHP_CHANGED_FILES}
+            - JS_CHANGED_FILES=${JS_CHANGED_FILES}
+            - STYLE_CHANGED_FILES=${STYLE_CHANGED_FILES}
+            - TWIG_CHANGED_FILES=${TWIG_CHANGED_FILES}
+            - TEXT_CHANGED_FILES=${TEXT_CHANGED_FILES}
+          EOF
+```
+
+**GitHub Actions**
+```yaml
+jobs:
+  lint:
+    steps:
+      - run: |
+          cat > .ddev/config.pipeline.yaml << EOF
+          web_environment:
+            - IS_CI=TRUE
+            - PHP_CHANGED_FILES=${{ env.PHP_CHANGED_FILES }}
+            - JS_CHANGED_FILES=${{ env.JS_CHANGED_FILES }}
+            - STYLE_CHANGED_FILES=${{ env.STYLE_CHANGED_FILES }}
+            - TWIG_CHANGED_FILES=${{ env.TWIG_CHANGED_FILES }}
+            - TEXT_CHANGED_FILES=${{ env.TEXT_CHANGED_FILES }}
+          EOF
+```
+
+**Azure DevOps**
+```yaml
+steps:
+  - bash: |
+      cat > .ddev/config.pipeline.yaml << EOF
+      web_environment:
+        - IS_CI=TRUE
+        - PHP_CHANGED_FILES=$(PHP_CHANGED_FILES)
+        - JS_CHANGED_FILES=$(JS_CHANGED_FILES)
+        - STYLE_CHANGED_FILES=$(STYLE_CHANGED_FILES)
+        - TWIG_CHANGED_FILES=$(TWIG_CHANGED_FILES)
+        - TEXT_CHANGED_FILES=$(TEXT_CHANGED_FILES)
+      EOF
+```
+
+3. Then run the linting command:
+```bash
+ddev dev-lint
 ```
