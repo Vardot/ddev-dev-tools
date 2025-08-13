@@ -166,3 +166,45 @@ steps:
 ```bash
 ddev dev-lint
 ```
+
+### Testing Tools 🧪
+- **Cypress**
+  - `cypress-open` - Open interactive Cypress window
+  - `cypress-run` - Run Cypress tests in headless mode
+
+It's recommended to run ddev cypress-open first to create configuration and support files. This addon sets CYPRESS_baseUrl to DDEV's primary URL in the docker-compose.cypress.yaml.
+...
+
+### Cypress Usage
+
+To use Cypress, you'll need to configure your display settings based on your OS:
+
+**macOS:**
+```bash
+brew install xquartz --cask
+open -a XQuartz
+# Check "Allow connections from network clients" in XQuartz preferences
+# Restart your Mac
+xhost + 127.0.0.1
+
+# Add to .ddev/docker-compose.cypress_extra.yaml:
+services:
+  cypress:
+    environment:
+      - DISPLAY=host.docker.internal:0
+```
+
+**Linux:**
+```bash
+export DISPLAY=:0
+xhost +
+```
+
+**Windows:**
+Install [GWSL](https://www.microsoft.com/en-us/p/gwsl/9nl6kd1h33v3) or [VcXsrv](https://sourceforge.net/projects/vcxsrv/)
+
+Running Cypress:
+```bash
+ddev cypress-open  # Interactive mode
+ddev cypress-run   # Headless mode
+```
