@@ -1,6 +1,9 @@
 name: dev-tools
 
+ddev_version_constraint: '>= v1.24.3'
+
 project_files:
+  - docker-compose.cypress.yaml
   - commands/host/dev-lint-all
   - commands/web/dev-cspell
   - commands/web/dev-eslint
@@ -10,6 +13,8 @@ project_files:
   - commands/web/dev-stylelint
   - commands/web/dev-twigcs
   - commands/web/dev-utils.sh
+  - commands/cypress/cypress-open
+  - commands/cypress/cypress-run
 
 post_install_actions:
   - ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
@@ -17,6 +22,29 @@ post_install_actions:
   - ddev exec composer config allow-plugins.vincentlanglet/twig-cs-fixer true
   - ddev exec composer require drupal/coder vincentlanglet/twig-cs-fixer
   - ddev yarn --cwd /var/www/html/docroot/core/ install
-  - echo "Vardot's DDEV Dev Tools has been installed and configured!"
+  - |
+    #ddev-nodisplay
+    #ddev-description:Adding all hostnames to the cypress container to make them available
+    cat <<-END >docker-compose.cypress_extras.yaml
+    #ddev-generated
+    services:
+      cypress:
+        external_links:
+        {{- $cypress_hostnames := splitList "," (env "DDEV_HOSTNAME") -}}
+        {{- range $i, $n := $cypress_hostnames }}
+          - "ddev-router:{{- replace (env "DDEV_TLD") "\\${DDEV_TLD}" (replace (env "DDEV_PROJECT") "\\${DDEV_PROJECT}" $n) -}}"
+        {{- end }}
+    END
+  - echo "Vardot's DDEV Dev Tools with Cypress support has been installed and configured!"
 
-ddev_version_constraint: '>= v1.24.3'
+removal_actions:
+  - |
+    #ddev-nodisplay
+    #ddev-description:Remove docker-compose.cypress_extras.yaml file
+    if [ -f docker-compose.cypress_extras.yaml ]; then
+      if grep -q '#ddev-generated' docker-compose.cypress_extras.yaml; then
+        rm -f docker-compose.cypress_extras.yaml
+      else
+        echo "Unwilling to remove '$DDEV_APPROOT/.ddev/docker-compose.cypress_extras.yaml' because it does not have #ddev-generated in it; you can manually delete it if it is safe to delete."
+      fi
+    fi
