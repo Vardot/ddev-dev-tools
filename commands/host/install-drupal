@@ -1,22 +1,52 @@
 #!/bin/bash
-## #ddev-generated
 
-set -euo pipefail  # Exit on errors and undefined variables
+## #ddev-generated
+# Exit on errors and undefined variables
+set -euo pipefail
 
 ## Description: Install Drupal using existing configuration
 ## Usage: install-drupal
 
 echo "🛠️ Installing Drupal..."
-# Creating this directory so we can clear cache.
-mkdir -p docroot/sites/default/files/addtoany/menu
 
 echo "📥 Importing Database..."
-ddev import-db --file=./backups/thin-db.sql.gz
-ddev drush cr
 
+# Check if the database file exists
+if [ "${IS_CI:-false}" = "TRUE" ]; then
+    echo "Running in CI environment"
+    ddev drush sql-drop -y
+    ddev import-db --file=./backups/thin-db.sql.gz
+    ddev drush cr
+else
+    if [ -d ./backups ]; then
+        ddev drush sql-drop -y
+        # Find all .sql.gz files in the backups directory
+        mapfile -t db_files < <(find ./backups -maxdepth 1 -type f -name "*.sql.gz")
+        if [ ${#db_files[@]} -eq 0 ]; then
+            echo "📥 No database backup files found!"
+            exit 1
+        elif [ ${#db_files[@]} -eq 1 ]; then
+            selected_db="${db_files[0]}"
+            echo "📥 Found one backup: $selected_db"
+        else
+            echo "Multiple database backups found:"
+            select selected_db in "${db_files[@]}"; do
+            if [ -n "$selected_db" ]; then
+                break
+            else
+                echo "Invalid selection."
+            fi
+            done
+        fi
+        ddev import-db --file="$selected_db"
+        ddev drush cr
+    else
+        echo "📥 Database backup not found!"
+        exit 1
+    fi
+fi
 echo "📦 Updating Database..."
-ddev drush updb
-ddev drush cr
+ddev drush updb -y
 
 echo "⚙️ Importing Configuration..."
 ddev drush cim -y
