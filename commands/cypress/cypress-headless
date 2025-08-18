@@ -2,7 +2,7 @@
 #ddev-generated
 ## Description: Use Cypress in "runner" mode.
 ##
-## Usage: cypress-run [arguments]
-## Example: "ddev cypress-run --browser chrome"
+## Usage: cypress-headless [arguments]
+## Example: "ddev cypress-headless --browser chrome"
 
 cypress run "$@"

@@ -52,4 +52,22 @@ echo "⚙️ Importing Configuration..."
 ddev drush cim -y
 ddev drush cr
 
+echo "👤 Creating site admin user..."
+admin_user="admin"
+ddev drush user:create "$admin_user" --mail="admin@example.com" --password="password"
+# Check if 'site_admin' role exists
+if ddev drush role:list | grep -q '^site_admin'; then
+    ddev drush user:role:add "site_admin" "$admin_user"
+else
+    # Find any role containing 'admin'
+    admin_roles=$(ddev drush role:list | grep 'admin' | awk '{print $1}')
+    if [ -n "$admin_roles" ]; then
+        for role in $admin_roles; do
+            ddev drush user:role:add "$role" "$admin_user"
+        done
+    else
+        echo "No 'admin' roles found to assign to $admin_user."
+    fi
+fi
+
 echo "✅ Installation Complete!"
