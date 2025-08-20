@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail  # Exit on errors and undefined variables
+set -euo pipefail
 
 # --------------------------
 # Start timer
@@ -10,44 +10,68 @@ start_time=$(date +%s)
 # Configuration
 # --------------------------
 DB_FILE="thin-db.sql"
-WORKDIR="/var/www/html"  # DDEV web container's docroot
+WORKDIR="/var/www/html"  # DDEV web container's project root
 
-# Hint about overwrite
 echo "ℹ️  Note: This script will overwrite ${WORKDIR}/backups/${DB_FILE}.gz if it already exists."
 
-# Define patterns for tables to truncate
+# Resolve settings.ddev.php in common Drupal layouts
+SETTINGS_CANDIDATES=(
+  "${WORKDIR}/docroot/sites/default/settings.ddev.php"
+  "${WORKDIR}/web/sites/default/settings.ddev.php"
+  "${WORKDIR}/sites/default/settings.ddev.php"
+)
+SETTINGS_FILE=""
+for f in "${SETTINGS_CANDIDATES[@]}"; do
+  if [ -f "$f" ]; then SETTINGS_FILE="$f"; break; fi
+done
+if [ -z "${SETTINGS_FILE}" ]; then
+  echo "❌ Error: settings.ddev.php not found in common locations."
+  exit 5
+fi
+
+# Get original database name (robust across Drush versions)
+ORIGINAL_DB="$(
+  drush status --field=db-name --format=string 2>/dev/null || \
+  drush status --fields=db-name --format=string 2>/dev/null || \
+  drush sql:connect --database=default 2>/dev/null | sed -n 's/.*--database=\([^ ]*\).*/\1/p'
+)"
+if [ -z "${ORIGINAL_DB}" ]; then
+  echo "❌ Error: Could not determine original database name via Drush."
+  exit 6
+fi
+
+DRUSH_ARGS=""
+DB_NAME=""
+
+# Patterns to empty on the copied DB (only applied to tables that exist)
 TRUNCATE_PATTERNS=(
-  "^node"
-  "^media"
-  "^taxonomy_term"
-  "^feeds"
-  "^path_alias"
-  "^content_moderation"
-  "^crop"
-  "^cache_"
-  "^redirect"
-  "file_managed$"
-  "s3fs_file$"
-  "search_api_item$"
-  "admin_audit_trail$"
-  "taxonomy_index$"
-  "file_usage$"
-  "simple_sitemap$"
-  "batch$"
+  "^node"                # nodes and revisions/fields
+  "^media"               # media entities
+  "^taxonomy"            # taxonomy terms and indexes
+  "^comment"             # comments
+  "^path_alias"          # path aliases
+  "^content_moderation"  # moderation states
+  "^crop"                # image crops
+  "^cache"               # cache tables incl. cachetags
+  "^redirect"            # redirects
+  "^file_"               # file_managed, file_usage, etc.
+  "^search"              # search tables, search_api_*
+  "^admin_audit_trail"   # contrib
+  "^simple_sitemap"      # contrib
+  "^batch$"              # batch API
+  "^queue$"              # queue
+  "^watchdog$"           # dblog
+  "^sessions$"           # sessions
+  "^flood$"              # flood control
+  "^history$"            # content read markers
 )
 
-# Get original database details
-ORIGINAL_DB=$(drush sql:connect --database=default | sed -n 's/.*--database=\([^ ]*\).*/\1/p')
-DRUSH_ARGS=""
-
 # --------------------------
-# Always create a copy of the database
+# Create copy database
 # --------------------------
 TARGET_DB="${ORIGINAL_DB}_thin"
-echo "Creating working copy of database..."
+echo "Creating working copy of database ${TARGET_DB}..."
 
-# Add db_copy configuration to settings.ddev.php
-SETTINGS_FILE="docroot/sites/default/settings.ddev.php"
 DB_COPY_CONFIG=$(cat <<EOF
 
 // Automatically added by thin-db-export script - START
@@ -63,220 +87,141 @@ DB_COPY_CONFIG=$(cat <<EOF
 EOF
 )
 
-# Backup original file and append configuration
-if [ -f "$SETTINGS_FILE" ]; then
-    cp "$SETTINGS_FILE" "${SETTINGS_FILE}.bak"
-    echo "$DB_COPY_CONFIG" >> "$SETTINGS_FILE"
-    echo "✅ Added ${TARGET_DB} configuration to settings.ddev.php"
-else
-    echo "❌ Error: settings.ddev.php not found!"
-    exit 5
-fi
+cp "$SETTINGS_FILE" "${SETTINGS_FILE}.bak"
+echo "$DB_COPY_CONFIG" >> "$SETTINGS_FILE"
+echo "✅ Added ${TARGET_DB} configuration to settings.ddev.php"
 
-# Create temporary SQL file for database creation
+# Create DB and grant (DDEV defaults)
 TEMP_SQL="/tmp/create_db.sql"
-echo "DROP DATABASE IF EXISTS ${TARGET_DB}; CREATE DATABASE ${TARGET_DB};" > "$TEMP_SQL"
-
-# Use mysql root user to create the database
+echo "DROP DATABASE IF EXISTS \`${TARGET_DB}\`; CREATE DATABASE \`${TARGET_DB}\`;" > "$TEMP_SQL"
 mysql -uroot -proot < "$TEMP_SQL"
-rm "$TEMP_SQL"
+rm -f "$TEMP_SQL"
+mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON \`${TARGET_DB}\`.* TO 'db'@'%';"
 
-# Grant privileges to the 'db' user
-mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON ${TARGET_DB}.* TO 'db'@'%';"
-
-# Copy the complete structure first
+# Dump structure from original and import into target
 echo "Copying database structure..."
 STRUCTURE_FILE="/tmp/db_structure.sql"
-drush sql:dump \
-    --extra="--skip-comments --skip-dump-date --no-data" \
-    --result-file="$STRUCTURE_FILE"
-
-# Import the structure to the new database
-drush sql:query --database="${TARGET_DB}" --file="$STRUCTURE_FILE"
+drush sql:dump --extra="--skip-comments --skip-dump-date --no-data" --result-file="$STRUCTURE_FILE"
+# Import structure using drush sql:cli to avoid version-specific flags
+drush sql:cli --database="${TARGET_DB}" < "$STRUCTURE_FILE"
 rm -f "$STRUCTURE_FILE"
 
-# Copy only the essential data (excluding content tables)
-echo "Copying essential data..."
-
-# Disable foreign key checks for data copy
+# Copy data for all base tables (no hardcoded lists)
+echo "Copying data for all base tables..."
 drush sql:query --database="${TARGET_DB}" "SET FOREIGN_KEY_CHECKS=0;"
-
-# First handle users and related tables in the correct order
-CORE_TABLES=(
-    "users"
-    "users_field_data"
-    "user__roles"
-    "user__user_picture"
-    "user__field_pending_expire_sent"
-    "user__field_password_expiration"
-)
-
-for table in "${CORE_TABLES[@]}"; do
-    echo "Copying core table: $table"
-    drush sql:query --database="${TARGET_DB}" "TRUNCATE TABLE \`${table}\`;"
-    drush sql:query "REPLACE INTO ${TARGET_DB}.$table SELECT * FROM ${ORIGINAL_DB}.$table"
-done
-
-# Then copy remaining tables
 TABLES_TO_COPY=$(drush sql:query "
-    SELECT TABLE_NAME
-    FROM information_schema.TABLES
-    WHERE TABLE_SCHEMA = '${ORIGINAL_DB}'
-    AND TABLE_NAME NOT REGEXP '^(node|media|taxonomy_term|feeds|path_alias|content_moderation|crop|cache|redirect)'
-    AND TABLE_NAME NOT IN (
-        'file_managed', 's3fs_file', 'search_api_item', 'admin_audit_trail',
-        'taxonomy_index', 'file_usage', 'simple_sitemap', 'batch',
-        'users', 'users_field_data', 'user__roles', 'user__user_picture',
-        'user__field_pending_expire_sent', 'user__field_password_expiration'
-    )
+  SELECT TABLE_NAME
+  FROM information_schema.TABLES
+  WHERE TABLE_SCHEMA='${ORIGINAL_DB}' AND TABLE_TYPE='BASE TABLE';
 ")
-
 for table in $TABLES_TO_COPY; do
-    echo "Copying table: $table"
-    drush sql:query --database="${TARGET_DB}" "TRUNCATE TABLE \`${table}\`;"
-    drush sql:query "INSERT INTO ${TARGET_DB}.$table SELECT * FROM ${ORIGINAL_DB}.$table"
+  echo "Copying: ${table}"
+  drush sql:query --database="${TARGET_DB}" "TRUNCATE TABLE \`${table}\`;" || true
+  drush sql:query "INSERT INTO \`${TARGET_DB}\`.\`${table}\` SELECT * FROM \`${ORIGINAL_DB}\`.\`${table}\`;" || true
 done
-
-# Re-enable foreign key checks
 drush sql:query --database="${TARGET_DB}" "SET FOREIGN_KEY_CHECKS=1;"
 
 DRUSH_ARGS="--database=${TARGET_DB}"
-echo "✅ Database copy created successfully."
+DB_NAME="${TARGET_DB}"
+echo "✅ Database copy created."
 
 # --------------------------
-# Delete All Content
+# Thin the copied DB
 # --------------------------
-echo "🗑️  Deleting all content..."
+echo "🗑️  Removing content and rebuildable data from ${DB_NAME}..."
 
+# FK off while truncating
 drush sql:query $DRUSH_ARGS "SET FOREIGN_KEY_CHECKS=0;"
 
-DB_NAME="$TARGET_DB"
-
+# Truncate by patterns, only existing tables are targeted
 for pattern in "${TRUNCATE_PATTERNS[@]}"; do
   echo "Truncating tables matching: ${pattern}"
-  drush sql:query $DRUSH_ARGS "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${DB_NAME}' AND TABLE_NAME REGEXP '${pattern}'" \
-    | grep -v '^TABLE_NAME$' \
-    | while read -r table; do
-      [ -z "${table}" ] && continue
-      echo "Truncating ${table}"
-      drush sql:query $DRUSH_ARGS "TRUNCATE TABLE \`${table}\`;"
-    done
+  drush sql:query $DRUSH_ARGS "
+    SELECT TABLE_NAME
+    FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME REGEXP '${pattern}'
+  " | grep -v '^TABLE_NAME$' | while read -r table; do
+    [ -z "$table" ] && continue
+    echo "TRUNCATE ${table}"
+    drush sql:query $DRUSH_ARGS "TRUNCATE TABLE \`${table}\`;" || true
+  done
 done
 
-# --------------------------
-# Additional Cleanup
-# --------------------------
-echo "🧹 Cleaning rebuildable data..."
+# Remove pathauto state keys if table exists (safe on all sites with key_value)
 drush sql:query $DRUSH_ARGS "
-  TRUNCATE cachetags;
-  TRUNCATE cache_entity;
-  TRUNCATE cache_menu;
-  TRUNCATE cache_render;
-  TRUNCATE cache_data;
-  DELETE FROM key_value WHERE collection IN (
-    'pathauto_state.media',
-    'pathauto_state.node',
-    'pathauto_state.taxonomy_term',
-    'pathauto_state.user'
-  );
-"
+  DELETE FROM key_value
+  WHERE collection IN ('pathauto_state.media','pathauto_state.node','pathauto_state.taxonomy_term','pathauto_state.user');
+" || true
 
+# --------------------------
+# Sanitize users (generic)
+# --------------------------
+echo "👤 Sanitizing users (keep uid=1)..."
+
+# Helper to run a DELETE if a table exists with given column/condition
+delete_if_exists() {
+  local table="$1"
+  local condition="$2"
+  local exists
+  exists=$(drush sql:query $DRUSH_ARGS "SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME='${table}' LIMIT 1;")
+  if echo "$exists" | grep -q 1; then
+    drush sql:query $DRUSH_ARGS "DELETE FROM \`${table}\` WHERE ${condition};" || true
+  fi
+}
+
+# Core user tables
+delete_if_exists "users_field_data" "uid != 1"
+delete_if_exists "users" "uid != 1"
+
+# Any user field tables: user__*
+USER_FIELD_TABLES=$(drush sql:query $DRUSH_ARGS "
+  SELECT TABLE_NAME FROM information_schema.TABLES
+  WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME LIKE 'user\_\_%';
+")
+for t in $USER_FIELD_TABLES; do
+  # Typical user field tables have entity_id
+  drush sql:query $DRUSH_ARGS "DELETE FROM \`${t}\` WHERE entity_id != 1;" || true
+done
+
+# Clear sessions if present
+delete_if_exists "sessions" "1=1"
+
+# Re-enable FK checks
 drush sql:query $DRUSH_ARGS "SET FOREIGN_KEY_CHECKS=1;"
 
 # --------------------------
-# Sanitize Users
-# --------------------------
-echo "👤 Deleting users..."
-drush sql:query $DRUSH_ARGS "
-    DELETE FROM users_field_data WHERE uid != 1;
-    DELETE FROM users WHERE uid != 1;
-    DELETE FROM user__roles WHERE entity_id != 1;
-    DELETE FROM user__user_picture WHERE entity_id != 1;
-    DELETE FROM user__field_pending_expire_sent WHERE entity_id != 1;
-    DELETE FROM user__field_password_expiration WHERE entity_id != 1;
-"
-
-# --------------------------
-# Export Database
+# Export the thinned DB
 # --------------------------
 echo "📦 Exporting database..."
-
-EXCLUDED_TABLES=$(drush sql:query $DRUSH_ARGS "
-  SELECT GROUP_CONCAT(TABLE_NAME SEPARATOR ',')
-  FROM information_schema.TABLES
-  WHERE TABLE_SCHEMA = '${DB_NAME}'
-    AND TABLE_NAME IN (
-      'node',
-      'node_field_data',
-      'node__body',
-      'media',
-      'taxonomy_term_data',
-      'taxonomy_term_field_data',
-      'feeds_feed',
-      'path_alias',
-      'content_moderation_state',
-      'crop',
-      'cache',
-      'cache_bootstrap',
-      'cache_config',
-      'cache_container',
-      'cache_data',
-      'cache_default',
-      'cache_discovery',
-      'cache_dynamic_page_cache',
-      'cache_entity',
-      'cache_menu',
-      'cache_render',
-      'cache_toolbar',
-      'redirect',
-      'file_managed',
-      's3fs_file',
-      'search_api_item',
-      'admin_audit_trail',
-      'taxonomy_index',
-      'file_usage',
-      'simple_sitemap',
-      'batch'
-    )
-")
-
 drush sql:dump $DRUSH_ARGS \
-  --structure-tables-list="${EXCLUDED_TABLES}" \
   --ordered-dump \
   --extra="--skip-comments --skip-dump-date --single-transaction --no-tablespaces" \
   --result-file="${WORKDIR}/${DB_FILE}"
 
 # --------------------------
-# Compress and Verify
+# Compress and move
 # --------------------------
 echo "🗜️  Compressing..."
 cd "${WORKDIR}"
-gzip -9 "${DB_FILE}"
-
+gzip -f -9 "${DB_FILE}"
 mkdir -p "${WORKDIR}/backups/"
 mv "${DB_FILE}.gz" "${WORKDIR}/backups/"
 
 echo "✅ Done! Final file: ${WORKDIR}/backups/${DB_FILE}.gz"
 echo "File size: $(du -h ${WORKDIR}/backups/${DB_FILE}.gz | cut -f1)"
 
+# --------------------------
 # Cleanup
-echo "Cleaning up..."
+# --------------------------
+echo "Cleaning up settings and temporary DB..."
+sed -i '/\/\/ Automatically added by thin-db-export script - START/,/\/\/ Automatically added by thin-db-export script - END/d' "$SETTINGS_FILE" || true
+rm -f "${SETTINGS_FILE}.bak" || true
 
-if [ -f "$SETTINGS_FILE" ]; then
-    sed -i '/\/\/ Automatically added by thin-db-export script - START/,/\/\/ Automatically added by thin-db-export script - END/d' "$SETTINGS_FILE"
-    rm -f "${SETTINGS_FILE}.bak"
-    echo "✅ Removed ${TARGET_DB} configuration from settings.ddev.php"
-else
-    echo "⚠️  settings.ddev.php not found during cleanup"
-fi
-
-echo "Cleaning up temporary database..."
-drush sql:query "DROP DATABASE ${TARGET_DB}"
+drush sql:query "DROP DATABASE \`${TARGET_DB}\`" || true
 
 # --------------------------
-# End timer and report duration
+# End timer
 # --------------------------
 end_time=$(date +%s)
 duration=$((end_time - start_time))
-
 echo "Completed in ${duration} seconds"
