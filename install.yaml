@@ -5,6 +5,7 @@ ddev_version_constraint: '>= v1.24.3'
 project_files:
   - docker-compose.cypress.yaml
   - commands/host/dev-lint-all
+  - commands/host/install-drupal
   - commands/web/dev-cspell
   - commands/web/dev-eslint
   - commands/web/dev-lint
