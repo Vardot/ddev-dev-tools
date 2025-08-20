@@ -14,8 +14,8 @@ project_files:
   - commands/web/dev-stylelint
   - commands/web/dev-twigcs
   - commands/web/dev-utils.sh
-  - commands/cypress/cypress-open
-  - commands/cypress/cypress-run
+  - commands/cypress/cypress-headless
+  - commands/cypress/cypress-ui
 
 post_install_actions:
   - ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
