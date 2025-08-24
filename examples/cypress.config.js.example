@@ -1,0 +1,16 @@
+module.exports = {
+  e2e: {
+    pageLoadTimeout: 60000,
+    chromeWebSecurity: false,
+    blockHosts: [
+      "*.google-analytics.com",
+      "*.googletagmanager.com",
+      "*.doubleclick.net",
+      "fonts.googleapis.com",
+      "fonts.gstatic.com"
+    ],
+    setupNodeEvents(on, config) {
+      // implement node event listeners here
+    },
+  },
+};

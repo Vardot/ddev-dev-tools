@@ -8,9 +8,9 @@ set -euo pipefail
 ## Usage: install-drupal
 
 echo "🛠️ Installing Drupal..."
+ddev composer install
 
 echo "📥 Importing Database..."
-
 # Check if the database file exists
 if [ "${IS_CI:-false}" = "TRUE" ]; then
     echo "Running in CI environment"
@@ -45,12 +45,32 @@ else
         exit 1
     fi
 fi
+
 echo "📦 Updating Database..."
 ddev drush updb -y
 
 echo "⚙️ Importing Configuration..."
 ddev drush cim -y
 ddev drush cr
+
+# Uninstall modules only if they are installed (enabled or disabled)
+uninstall_if_enabled() {
+  local module
+  for module in "$@"; do
+    if ddev drush pm:list --type=module --status=enabled,disabled --format=list | grep -Fxq "$module"; then
+      echo "Disabling/uninstalling module: $module"
+      # Do not fail the script if uninstall reports "not installed"
+      ddev drush pm:uninstall "$module" -y || {
+        echo "Module '$module' could not be uninstalled (likely not installed). Continuing."
+      }
+    else
+      echo "Module '$module' not installed; skipping."
+    fi
+  done
+}
+
+echo "⚙️  Disabling Captcha & Login destination modules"
+uninstall_if_enabled captcha login_destination
 
 echo "👤 Creating site admin user..."
 admin_user="admin"

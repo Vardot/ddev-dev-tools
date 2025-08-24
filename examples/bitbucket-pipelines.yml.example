@@ -1,0 +1,28 @@
+pipelines:
+  pull-requests:
+    'release/**':
+      - step:
+          name: 🚀 Install Drupal and run automated tests
+          runs-on:
+            - self.hosted
+            - linux.shell
+            - main
+          clone:
+            depth: full
+          script:
+            - chmod 777 .ddev -R
+            - chmod 777 docroot/sites/default -R
+            - export DOCKER_HOST=""
+            - export DOCKER_BUILDKIT=1
+            - ddev start
+            - ddev add-on get Vardot/ddev-dev-tools
+            - ddev restart
+            - ddev install-drupal
+            - ddev cypress-headless
+          after-script:
+            - chmod 777 .ddev -R
+            - chmod 777 docroot/sites/default -R
+            - export DOCKER_HOST=""
+            - export DOCKER_BUILDKIT=1
+            - ddev stop --unlist --all --omit-snapshot --remove-data
+            - yes | ddev delete --all --omit-snapshot
