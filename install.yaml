@@ -19,9 +19,9 @@ project_files:
 
 post_install_actions:
   - ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-  - ddev exec composer require drupal/coder dealerdirect/phpcodesniffer-composer-installer
+  - ddev exec composer require --dev drupal/coder dealerdirect/phpcodesniffer-composer-installer
   - ddev exec composer config allow-plugins.vincentlanglet/twig-cs-fixer true
-  - ddev exec composer require drupal/coder vincentlanglet/twig-cs-fixer
+  - ddev exec composer require --dev vincentlanglet/twig-cs-fixer
   - ddev yarn --cwd /var/www/html/docroot/core/ install
   - |
     #ddev-nodisplay
