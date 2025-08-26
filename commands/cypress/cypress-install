@@ -1,0 +1,10 @@
+#!/bin/bash
+#ddev-generated
+
+## Description: Install npm packages in the Cypress container
+## Usage: cypress-install
+## Example: "ddev cypress-install"
+
+export npm_config_cache=/tmp/.npm
+npm install @badeball/cypress-cucumber-preprocessor
+npm install @bahmutov/cypress-esbuild-preprocessor
