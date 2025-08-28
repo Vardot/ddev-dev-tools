@@ -175,6 +175,8 @@ ddev dev-lint
 
 It's recommended to run ddev cypress-open first to create configuration and support files. This addon sets CYPRESS_baseUrl to DDEV's primary URL in the docker-compose.cypress.yaml.
 
+**Note:** This addon uses the latest official Cypress Docker image to ensure up-to-date testing capabilities and compatibility.
+
 #### Cypress with Cucumber Support
 
 For Behavior-Driven Development (BDD) with Gherkin syntax:
@@ -200,8 +202,6 @@ Feature: User Login
 
 The addon includes example configurations:
 - `cypress.config.js.example-[cucumber]` - Configuration with Cucumber/Gherkin support
-
-// ...existing code...
 
 ### Cypress Usage
 
