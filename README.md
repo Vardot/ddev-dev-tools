@@ -230,22 +230,3 @@ xhost +
 
 **Windows:**
 Install [GWSL](https://www.microsoft.com/en-us/p/gwsl/9nl6kd1h33v3) or [VcXsrv](https://sourceforge.net/projects/vcxsrv/)
-
-**Running Cypress:**
-```bash
-ddev cypress-open      # Interactive mode
-ddev cypress-run       # Headless mode
-ddev cypress-install   # Install Cucumber support packages
-```
-
-**Setting up Cucumber/BDD Testing:**
-```bash
-# 1. Install Cucumber support
-ddev cypress-install
-
-# 2. Use the Cucumber configuration
-cp examples/cypress.config.js.example-[cucumber] cypress.config.js
-
-# 3. Create feature files in cypress/e2e/
-# 4. Create step definitions in cypress/support/step_definitions/
-```
