@@ -15,6 +15,7 @@ project_files:
   - commands/web/dev-twigcs
   - commands/web/dev-utils.sh
   - commands/cypress/cypress-headless
+  - commands/cypress/cypress-install
   - commands/cypress/cypress-ui
 
 post_install_actions:
