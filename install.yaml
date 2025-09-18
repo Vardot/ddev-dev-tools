@@ -14,6 +14,7 @@ project_files:
   - commands/web/dev-stylelint
   - commands/web/dev-twigcs
   - commands/web/dev-utils.sh
+  - commands/web/thin-db-export
   - commands/cypress/cypress-headless
   - commands/cypress/cypress-install
   - commands/cypress/cypress-ui
