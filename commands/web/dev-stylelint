@@ -31,4 +31,11 @@ fi
 echo "🔍 Running Stylelint on files:"
 echo "$FILES" | tr ' ' '\n'
 
-node docroot/core/node_modules/stylelint/bin/stylelint.mjs --config docroot/core/.stylelintrc.json --color $FILES
+if [ -f "./.stylelintrc.json" ]; then
+    echo "Using local .stylelintrc.json"
+    CONFIG="./.stylelintrc.json"
+else
+    CONFIG="docroot/core/.stylelintrc.json"
+fi
+
+node docroot/core/node_modules/stylelint/bin/stylelint.mjs --config "$CONFIG" --color --allow-empty-input $FILES

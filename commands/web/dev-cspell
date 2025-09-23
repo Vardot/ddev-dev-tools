@@ -31,4 +31,11 @@ fi
 echo "🔍 Running CSpell on files:"
 echo "$FILES" | tr ' ' '\n'
 
-node docroot/core/node_modules/cspell/bin.mjs --config docroot/core/.cspell.json --color $FILES
+if [ -f "./.cspell.json" ]; then
+    echo "Using local .cspell.json"
+    CONFIG="./.cspell.json"
+else
+    CONFIG="docroot/core/.cspell.json"
+fi
+
+node docroot/core/node_modules/cspell/bin.mjs --config "$CONFIG" --color $FILES

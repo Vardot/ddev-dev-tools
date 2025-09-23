@@ -48,6 +48,7 @@ pipelines:
             - find .ddev/commands -type f ! -name 'ddev-lint' -delete
             - ddev add-on get Vardot/ddev-dev-tools
             - ddev restart
+            - ddev npm ci --ignore-scripts
             - ddev dev-lint
             - fi
           after-script:

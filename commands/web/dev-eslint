@@ -31,5 +31,12 @@ fi
 echo "Files to check:"
 echo "$FILES" | tr ' ' '\n'
 
+if [ -f "./.eslintrc.json" ]; then
+    echo "Using local .eslintrc.json"
+    CONFIG="./.eslintrc.json"
+else
+    CONFIG="docroot/core/.eslintrc.json"
+fi
+
 # Run ESLint
-node docroot/core/node_modules/eslint/bin/eslint.js --config=docroot/core/.eslintrc.json --no-eslintrc -f stylish --color $FILES
+node docroot/core/node_modules/eslint/bin/eslint.js --config="$CONFIG" --no-eslintrc -f stylish --color $FILES
