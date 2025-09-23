@@ -44,8 +44,9 @@ pipelines:
             - ddev composer config --global github-oauth.github.com $GITHUB_TOKEN
             - ddev composer install --optimize-autoloader
             # Require Vardot's DDEV Dev tools add-on
-            - echo "🧹 Cleaning up old .ddev command files"
+            - echo "🧹 Cleaning up old .ddev command files & drupal/coder package"
             - find .ddev/commands -type f ! -name 'ddev-lint' -delete
+            - rm -rf vendor/drupal/coder
             - ddev add-on get Vardot/ddev-dev-tools
             - ddev restart
             - ddev npm ci --ignore-scripts
