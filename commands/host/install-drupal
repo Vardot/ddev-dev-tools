@@ -70,7 +70,7 @@ uninstall_if_enabled() {
 }
 
 echo "⚙️  Disabling Captcha & Login destination modules"
-uninstall_if_enabled captcha login_destination
+uninstall_if_enabled captcha login_destination honeypot
 
 echo "👤 Creating site admin user..."
 admin_user="admin"

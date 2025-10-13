@@ -45,8 +45,6 @@ DB_NAME=""
 
 # Patterns to empty on the copied DB (only applied to tables that exist)
 TRUNCATE_PATTERNS=(
-  "^node"                # nodes and revisions/fields
-  "^media"               # media entities
   "^taxonomy"            # taxonomy terms and indexes
   "^comment"             # comments
   "^path_alias"          # path aliases
@@ -64,6 +62,12 @@ TRUNCATE_PATTERNS=(
   "^sessions$"           # sessions
   "^flood$"              # flood control
   "^history$"            # content read markers
+)
+
+# Patterns for selective cleanup (keep 1 of each type)
+SELECTIVE_CLEANUP_PATTERNS=(
+  "^node"                # nodes and revisions/fields
+  "^media"               # media entities
 )
 
 # --------------------------
@@ -106,20 +110,14 @@ drush sql:dump --extra="--skip-comments --skip-dump-date --no-data" --result-fil
 drush sql:cli --database="${TARGET_DB}" < "$STRUCTURE_FILE"
 rm -f "$STRUCTURE_FILE"
 
-# Copy data for all base tables (no hardcoded lists)
+# Copy data using mysqldump/mysql for better performance
 echo "Copying data for all base tables..."
-drush sql:query --database="${TARGET_DB}" "SET FOREIGN_KEY_CHECKS=0;"
-TABLES_TO_COPY=$(drush sql:query "
-  SELECT TABLE_NAME
-  FROM information_schema.TABLES
-  WHERE TABLE_SCHEMA='${ORIGINAL_DB}' AND TABLE_TYPE='BASE TABLE';
-")
-for table in $TABLES_TO_COPY; do
-  echo "Copying: ${table}"
-  drush sql:query --database="${TARGET_DB}" "TRUNCATE TABLE \`${table}\`;" || true
-  drush sql:query "INSERT INTO \`${TARGET_DB}\`.\`${table}\` SELECT * FROM \`${ORIGINAL_DB}\`.\`${table}\`;" || true
-done
-drush sql:query --database="${TARGET_DB}" "SET FOREIGN_KEY_CHECKS=1;"
+DUMP_FILE="/tmp/full_data.sql"
+echo "Creating full data dump..."
+drush sql:dump --extra="--skip-comments --skip-dump-date --single-transaction --no-create-info" --result-file="$DUMP_FILE"
+echo "Importing data to target database..."
+drush sql:cli --database="${TARGET_DB}" < "$DUMP_FILE"
+rm -f "$DUMP_FILE"
 
 DRUSH_ARGS="--database=${TARGET_DB}"
 DB_NAME="${TARGET_DB}"
@@ -128,23 +126,166 @@ echo "✅ Database copy created."
 # --------------------------
 # Thin the copied DB
 # --------------------------
-echo "🗑️  Removing content and rebuildable data from ${DB_NAME}..."
+echo "🗑️  Removing content and rebuildable data from ${DB_NAME} (keeping 1 node of each content type and 1 media of each type)..."
 
-# FK off while truncating
-drush sql:query $DRUSH_ARGS "SET FOREIGN_KEY_CHECKS=0;"
+# Build and execute truncate statements in batches for better performance
+echo "Building truncate statements..."
+TRUNCATE_SQL="/tmp/truncate_batch.sql"
+echo "SET FOREIGN_KEY_CHECKS=0;" > "$TRUNCATE_SQL"
 
-# Truncate by patterns, only existing tables are targeted
-for pattern in "${TRUNCATE_PATTERNS[@]}"; do
-  echo "Truncating tables matching: ${pattern}"
-  drush sql:query $DRUSH_ARGS "
-    SELECT TABLE_NAME
-    FROM information_schema.TABLES
-    WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME REGEXP '${pattern}'
-  " | grep -v '^TABLE_NAME$' | while read -r table; do
-    [ -z "$table" ] && continue
-    echo "TRUNCATE ${table}"
-    drush sql:query $DRUSH_ARGS "TRUNCATE TABLE \`${table}\`;" || true
-  done
+# Collect all tables to truncate in one query
+ALL_PATTERNS=$(printf "%s|" "${TRUNCATE_PATTERNS[@]}")
+ALL_PATTERNS=${ALL_PATTERNS%|}  # Remove trailing |
+
+TABLES_TO_TRUNCATE=$(drush sql:query $DRUSH_ARGS "
+  SELECT TABLE_NAME
+  FROM information_schema.TABLES
+  WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME REGEXP '${ALL_PATTERNS}'
+")
+
+echo "Generating truncate statements for matched tables..."
+for table in $TABLES_TO_TRUNCATE; do
+  [ -z "$table" ] && continue
+  echo "TRUNCATE TABLE \`${table}\`;" >> "$TRUNCATE_SQL"
+done
+
+echo "SET FOREIGN_KEY_CHECKS=1;" >> "$TRUNCATE_SQL"
+echo "Executing batch truncate..."
+drush sql:cli $DRUSH_ARGS < "$TRUNCATE_SQL" || true
+rm -f "$TRUNCATE_SQL"
+
+# Selective cleanup: keep 1 of each content type/bundle
+for pattern in "${SELECTIVE_CLEANUP_PATTERNS[@]}"; do
+  echo "Selective cleanup for tables matching: ${pattern}"
+
+  if [[ "$pattern" == "^node" ]]; then
+    echo "Keeping 1 node of each content type..."
+
+    # Create batch SQL file for node cleanup
+    NODE_CLEANUP_SQL="/tmp/node_cleanup.sql"
+    echo "SET FOREIGN_KEY_CHECKS=0;" > "$NODE_CLEANUP_SQL"
+
+    # Get nodes to keep (one per type) in a single query
+    NODES_TO_KEEP=$(drush sql:query $DRUSH_ARGS "
+      SELECT nfd1.type, MIN(nfd1.nid) as keep_nid
+      FROM node_field_data nfd1
+      GROUP BY nfd1.type;
+    " 2>/dev/null | grep -v '^type' || true)
+
+    if [ -n "$NODES_TO_KEEP" ]; then
+      # Build list of NIDs to keep for IN clause
+      KEEP_NIDS=""
+      while IFS=$'\t' read -r content_type keep_nid; do
+        [ -z "$content_type" ] || [ -z "$keep_nid" ] && continue
+        echo "Keeping node ID ${keep_nid} for type ${content_type}"
+        if [ -z "$KEEP_NIDS" ]; then
+          KEEP_NIDS="$keep_nid"
+        else
+          KEEP_NIDS="$KEEP_NIDS,$keep_nid"
+        fi
+      done <<< "$NODES_TO_KEEP"
+
+      if [ -n "$KEEP_NIDS" ]; then
+        # Delete nodes not in keep list - batch operation
+        echo "DELETE FROM node WHERE nid NOT IN ($KEEP_NIDS);" >> "$NODE_CLEANUP_SQL"
+        echo "DELETE FROM node_field_data WHERE nid NOT IN ($KEEP_NIDS);" >> "$NODE_CLEANUP_SQL"
+        echo "DELETE FROM node_field_revision WHERE nid NOT IN ($KEEP_NIDS);" >> "$NODE_CLEANUP_SQL"
+
+        # Get all node field tables once
+        NODE_FIELD_TABLES=$(drush sql:query $DRUSH_ARGS "
+          SELECT TABLE_NAME FROM information_schema.TABLES
+          WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME LIKE 'node\_\_field\_%';
+        " 2>/dev/null || true)
+
+        # Add field table cleanup to batch
+        for table in $NODE_FIELD_TABLES; do
+          [ -z "$table" ] && continue
+          echo "DELETE FROM \`${table}\` WHERE entity_id NOT IN ($KEEP_NIDS);" >> "$NODE_CLEANUP_SQL"
+        done
+
+        # Get all node revision field tables once
+        NODE_REVISION_TABLES=$(drush sql:query $DRUSH_ARGS "
+          SELECT TABLE_NAME FROM information_schema.TABLES
+          WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME LIKE 'node\_revision\_\_field\_%';
+        " 2>/dev/null || true)
+
+        # Add revision field table cleanup to batch
+        for table in $NODE_REVISION_TABLES; do
+          [ -z "$table" ] && continue
+          echo "DELETE FROM \`${table}\` WHERE entity_id NOT IN ($KEEP_NIDS);" >> "$NODE_CLEANUP_SQL"
+        done
+      fi
+    fi
+
+    echo "SET FOREIGN_KEY_CHECKS=1;" >> "$NODE_CLEANUP_SQL"
+    echo "Executing batch node cleanup..."
+    drush sql:cli $DRUSH_ARGS < "$NODE_CLEANUP_SQL" || true
+    rm -f "$NODE_CLEANUP_SQL"
+
+  elif [[ "$pattern" == "^media" ]]; then
+    echo "Keeping 1 media of each media type..."
+
+    # Create batch SQL file for media cleanup
+    MEDIA_CLEANUP_SQL="/tmp/media_cleanup.sql"
+    echo "SET FOREIGN_KEY_CHECKS=0;" > "$MEDIA_CLEANUP_SQL"
+
+    # Get media to keep (one per type) in a single query
+    MEDIA_TO_KEEP=$(drush sql:query $DRUSH_ARGS "
+      SELECT mfd1.bundle, MIN(mfd1.mid) as keep_mid
+      FROM media_field_data mfd1
+      GROUP BY mfd1.bundle;
+    " 2>/dev/null | grep -v '^bundle' || true)
+
+    if [ -n "$MEDIA_TO_KEEP" ]; then
+      # Build list of MIDs to keep for IN clause
+      KEEP_MIDS=""
+      while IFS=$'\t' read -r media_type keep_mid; do
+        [ -z "$media_type" ] || [ -z "$keep_mid" ] && continue
+        echo "Keeping media ID ${keep_mid} for type ${media_type}"
+        if [ -z "$KEEP_MIDS" ]; then
+          KEEP_MIDS="$keep_mid"
+        else
+          KEEP_MIDS="$KEEP_MIDS,$keep_mid"
+        fi
+      done <<< "$MEDIA_TO_KEEP"
+
+      if [ -n "$KEEP_MIDS" ]; then
+        # Delete media not in keep list - batch operation
+        echo "DELETE FROM media WHERE mid NOT IN ($KEEP_MIDS);" >> "$MEDIA_CLEANUP_SQL"
+        echo "DELETE FROM media_field_data WHERE mid NOT IN ($KEEP_MIDS);" >> "$MEDIA_CLEANUP_SQL"
+        echo "DELETE FROM media_field_revision WHERE mid NOT IN ($KEEP_MIDS);" >> "$MEDIA_CLEANUP_SQL"
+
+        # Get all media field tables once
+        MEDIA_FIELD_TABLES=$(drush sql:query $DRUSH_ARGS "
+          SELECT TABLE_NAME FROM information_schema.TABLES
+          WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME LIKE 'media\_\_field\_%';
+        " 2>/dev/null || true)
+
+        # Add field table cleanup to batch
+        for table in $MEDIA_FIELD_TABLES; do
+          [ -z "$table" ] && continue
+          echo "DELETE FROM \`${table}\` WHERE entity_id NOT IN ($KEEP_MIDS);" >> "$MEDIA_CLEANUP_SQL"
+        done
+
+        # Get all media revision field tables once
+        MEDIA_REVISION_TABLES=$(drush sql:query $DRUSH_ARGS "
+          SELECT TABLE_NAME FROM information_schema.TABLES
+          WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME LIKE 'media\_revision\_\_field\_%';
+        " 2>/dev/null || true)
+
+        # Add revision field table cleanup to batch
+        for table in $MEDIA_REVISION_TABLES; do
+          [ -z "$table" ] && continue
+          echo "DELETE FROM \`${table}\` WHERE entity_id NOT IN ($KEEP_MIDS);" >> "$MEDIA_CLEANUP_SQL"
+        done
+      fi
+    fi
+
+    echo "SET FOREIGN_KEY_CHECKS=1;" >> "$MEDIA_CLEANUP_SQL"
+    echo "Executing batch media cleanup..."
+    drush sql:cli $DRUSH_ARGS < "$MEDIA_CLEANUP_SQL" || true
+    rm -f "$MEDIA_CLEANUP_SQL"
+  fi
 done
 
 # Remove pathauto state keys if table exists (safe on all sites with key_value)
@@ -158,36 +299,36 @@ drush sql:query $DRUSH_ARGS "
 # --------------------------
 echo "👤 Sanitizing users (keep uid=1)..."
 
-# Helper to run a DELETE if a table exists with given column/condition
-delete_if_exists() {
-  local table="$1"
-  local condition="$2"
-  local exists
-  exists=$(drush sql:query $DRUSH_ARGS "SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME='${table}' LIMIT 1;")
-  if echo "$exists" | grep -q 1; then
-    drush sql:query $DRUSH_ARGS "DELETE FROM \`${table}\` WHERE ${condition};" || true
-  fi
-}
+
+
+# Batch user sanitization for better performance
+USER_CLEANUP_SQL="/tmp/user_cleanup.sql"
+echo "SET FOREIGN_KEY_CHECKS=0;" > "$USER_CLEANUP_SQL"
 
 # Core user tables
-delete_if_exists "users_field_data" "uid != 1"
-delete_if_exists "users" "uid != 1"
+echo "DELETE FROM users_field_data WHERE uid != 1;" >> "$USER_CLEANUP_SQL"
+echo "DELETE FROM users WHERE uid != 1;" >> "$USER_CLEANUP_SQL"
 
-# Any user field tables: user__*
+# Get all user field tables and add to batch
 USER_FIELD_TABLES=$(drush sql:query $DRUSH_ARGS "
   SELECT TABLE_NAME FROM information_schema.TABLES
   WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME LIKE 'user\_\_%';
-")
+" 2>/dev/null || true)
+
 for t in $USER_FIELD_TABLES; do
-  # Typical user field tables have entity_id
-  drush sql:query $DRUSH_ARGS "DELETE FROM \`${t}\` WHERE entity_id != 1;" || true
+  [ -z "$t" ] && continue
+  echo "DELETE FROM \`${t}\` WHERE entity_id != 1;" >> "$USER_CLEANUP_SQL"
 done
 
-# Clear sessions if present
-delete_if_exists "sessions" "1=1"
+# Clear sessions
+echo "TRUNCATE TABLE sessions;" >> "$USER_CLEANUP_SQL"
 
-# Re-enable FK checks
-drush sql:query $DRUSH_ARGS "SET FOREIGN_KEY_CHECKS=1;"
+echo "SET FOREIGN_KEY_CHECKS=1;" >> "$USER_CLEANUP_SQL"
+echo "Executing batch user cleanup..."
+drush sql:cli $DRUSH_ARGS < "$USER_CLEANUP_SQL" || true
+rm -f "$USER_CLEANUP_SQL"
+
+
 
 # --------------------------
 # Export the thinned DB
