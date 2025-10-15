@@ -17,7 +17,7 @@ pipelines:
             - echo "Starting the pipelines..."
       - parallel:
         - step:
-            name: 🧹 Linting And Spell Checking
+            name: 🧹 Linting & Spell Checking
             runs-on:
               - self.hosted
               - linux.shell
@@ -70,7 +70,7 @@ pipelines:
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev delete --omit-snapshot --yes || true
         - step:
-            name: 🚀 Install Drupal And Run Automated Tests
+            name: 🚀 Install Drupal & Run Automated Tests
             runs-on:
               - self.hosted
               - linux.shell
