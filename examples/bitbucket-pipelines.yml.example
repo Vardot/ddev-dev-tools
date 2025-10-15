@@ -1,87 +1,103 @@
 #################
-# Version 2.0.0 #
+# Version: 2.0.0
 #################
+
 pipelines:
   pull-requests:
     '**':
       - step:
-          name: 🧹 Linting & 📔 Spell Checking
+          name: 🛠️ Pipelines Initialization
           runs-on:
             - self.hosted
             - linux.shell
             - main
           clone:
-            depth: full
+            enabled: false
           script:
-            - git --version
-            - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
-            - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
-            - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
-            - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
-            - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
-            # Check changed files
-            - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
-            - echo \"No relevant files changed. Skipping Linting...\"
-            - else
-            - |
-              cat > .ddev/config.pipeline.yaml << EOF
-              web_environment:
-                - IS_CI=TRUE
-                - PHP_CHANGED_FILES=$PHP_CHANGED_FILES
-                - JS_CHANGED_FILES=$JS_CHANGED_FILES
-                - STYLE_CHANGED_FILES=$STYLE_CHANGED_FILES
-                - TWIG_CHANGED_FILES=$TWIG_CHANGED_FILES
-                - TEXT_CHANGED_FILES=$TEXT_CHANGED_FILES
-              EOF
-            - chmod 777 .ddev -R
-            - chmod 777 docroot/sites/default -R
-            - export DOCKER_HOST=""
-            - export DOCKER_BUILDKIT=1
-            - ddev -v
-            - ddev stop --unlist --all --omit-snapshot --remove-data
-            - yes | ddev delete --all --omit-snapshot
-            - ddev start
-            - ddev composer config --global github-oauth.github.com $GITHUB_TOKEN
-            - ddev composer install --optimize-autoloader
-            # Require Vardot's DDEV Dev tools add-on
-            - echo "🧹 Cleaning up old .ddev command files & drupal/coder package"
-            - find .ddev/commands -type f ! -name 'ddev-lint' -delete
-            - rm -rf vendor/drupal/coder
-            - ddev add-on get Vardot/ddev-dev-tools
-            - ddev restart
-            - ddev npm ci --ignore-scripts
-            - ddev dev-lint
-            - fi
-          after-script:
-            - chmod 777 .ddev -R
-            - chmod 777 docroot/sites/default -R
-            - export DOCKER_HOST=""
-            - export DOCKER_BUILDKIT=1
-            - ddev stop --unlist --all --omit-snapshot --remove-data
-            - yes | ddev delete --all --omit-snapshot
-    'release/**':
-      - step:
-          name: 🚀 Install Drupal and run automated tests
-          runs-on:
-            - self.hosted
-            - linux.shell
-            - main
-          clone:
-            depth: full
-          script:
-            - chmod 777 .ddev -R
-            - chmod 777 docroot/sites/default -R
-            - export DOCKER_HOST=""
-            - export DOCKER_BUILDKIT=1
-            - ddev start
-            - ddev add-on get Vardot/ddev-dev-tools
-            - ddev restart
-            - ddev install-drupal
-            - ddev cypress-headless
-          after-script:
-            - chmod 777 .ddev -R
-            - chmod 777 docroot/sites/default -R
-            - export DOCKER_HOST=""
-            - export DOCKER_BUILDKIT=1
-            - ddev stop --unlist --all --omit-snapshot --remove-data
-            - yes | ddev delete --all --omit-snapshot
+            - echo "Starting the pipelines..."
+      - parallel:
+        - step:
+            name: 🧹 Linting And Spell Checking
+            runs-on:
+              - self.hosted
+              - linux.shell
+              - linting
+            clone:
+              depth: full
+            script:
+              - git --version
+              - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
+              - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
+              - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
+              - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
+              - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
+              # Check changed files
+              - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
+              - echo "No relevant files changed. Skipping Linting..."
+              - else
+              - |
+                cat > .ddev/config.pipeline.yaml << EOF
+                web_environment:
+                  - IS_CI=TRUE
+                  - PHP_CHANGED_FILES=$PHP_CHANGED_FILES
+                  - JS_CHANGED_FILES=$JS_CHANGED_FILES
+                  - STYLE_CHANGED_FILES=$STYLE_CHANGED_FILES
+                  - TWIG_CHANGED_FILES=$TWIG_CHANGED_FILES
+                  - TEXT_CHANGED_FILES=$TEXT_CHANGED_FILES
+                EOF
+              - chmod 777 .ddev -R
+              - chmod 777 docroot/sites/default -R
+              - export DOCKER_HOST=""
+              - export DOCKER_BUILDKIT=1
+              - ddev -v
+              - ddev stop --unlist --all --omit-snapshot --remove-data
+              - yes | ddev delete --all --omit-snapshot
+              - ddev start
+              - ddev composer config --global github-oauth.github.com $GITHUB_TOKEN
+              - ddev composer install --optimize-autoloader
+              - echo "Cleaning up old .ddev command files & Drupal coder"
+              - find .ddev/commands -type f ! -name 'ddev-lint' -delete
+              - rm -rf vendor/drupal/coder
+              - ddev add-on get Vardot/ddev-dev-tools
+              - ddev restart
+              - ddev dev-lint
+              - fi
+            after-script:
+              - chmod 777 .ddev -R || true
+              - chmod 777 docroot/sites/default -R || true
+              - export DOCKER_HOST=""
+              - export DOCKER_BUILDKIT=1
+              - ddev stop --unlist --all --omit-snapshot --remove-data || true
+              - ddev delete --omit-snapshot --yes || true
+        - step:
+            name: 🚀 Install Drupal And Run Automated Tests
+            runs-on:
+              - self.hosted
+              - linux.shell
+              - testing
+            clone:
+              depth: full
+            script:
+              - FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
+              - echo "Found $FEATURE_FILES .feature files in cypress folder"
+              - if [ "$FEATURE_FILES" -eq 0 ]; then
+              -   echo "No .feature files found. Skipping automated tests..."
+              -   exit 0
+              - fi
+              - chmod 777 .ddev -R
+              - chmod 777 docroot/sites/default -R
+              - export DOCKER_HOST=""
+              - export DOCKER_BUILDKIT=1
+              - ddev start
+              - ddev add-on get Vardot/ddev-dev-tools
+              - ddev restart
+              - ddev install-drupal
+              - ddev cypress-install
+              - ddev cypress-headless
+            after-script:
+              - chmod 777 .ddev -R || true
+              - chmod 777 docroot/sites/default -R || true
+              - export DOCKER_HOST=""
+              - export DOCKER_BUILDKIT=1
+              - ddev stop --unlist --all --omit-snapshot --remove-data || true
+              - ddev delete --omit-snapshot --yes || true

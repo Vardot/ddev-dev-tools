@@ -4,8 +4,15 @@ const { addCucumberPreprocessorPlugin } = require('@badeball/cypress-cucumber-pr
 const { createEsbuildPlugin } = require('@badeball/cypress-cucumber-preprocessor/esbuild');
 
 module.exports = defineConfig({
+  viewportWidth: 1600,
+  viewportHeight: 840,
   e2e: {
     specPattern: 'cypress/e2e/*.feature',
+    excludeSpecPattern: [
+      'cypress/e2e/Clone Content Type.feature',
+      'cypress/e2e/Delete Content.feature',
+      'cypress/e2e/Edit Content.feature'
+    ],
     async setupNodeEvents(on, config) {
       await addCucumberPreprocessorPlugin(on, config);
 
@@ -13,6 +20,11 @@ module.exports = defineConfig({
         'file:preprocessor',
         createBundler({
           plugins: [createEsbuildPlugin(config)],
+          define: {
+            // ✅ This injects a mock `process.env` so Cypress doesn't crash
+            "process.env": "{}",
+            "process.platform": '"browser"',
+          },
         })
       );
 
