@@ -45,6 +45,11 @@ It supports both Drupal 8+ (`.info.yml`) and Drupal 7 (`.info`) module formats.
 
 **Example usage in test scripts:**
 ```bash
+# After running ddev install-drupal, source the status file
+if [ -f .cypress_test_content_status ]; then
+    source .cypress_test_content_status
+fi
+
 if [ "${CYPRESS_TEST_CONTENT_AVAILABLE}" = "true" ]; then
     echo "Running tests with cypress_test_content module"
     ddev cypress-headless --spec="cypress/e2e/content-tests.cy.js"
@@ -52,6 +57,8 @@ else
     echo "Skipping content tests - cypress_test_content module not available"
 fi
 ```
+
+**Note**: The `install-drupal` command writes the environment variable to `.cypress_test_content_status` file for use by CI/CD pipelines and host environment scripts.
 
 ## Installation
 
@@ -191,6 +198,28 @@ steps:
 3. Then run the linting command:
 ```bash
 ddev dev-lint
+```
+
+#### CI/CD Module Detection
+
+After running `ddev install-drupal`, the module detection result is saved to `.cypress_test_content_status` file. Source this file in your pipeline scripts:
+
+```bash
+# Run Drupal installation which detects the module
+ddev install-drupal
+
+# Source the module detection result
+if [ -f .cypress_test_content_status ]; then
+    source .cypress_test_content_status
+fi
+
+# Use the environment variable
+if [ "${CYPRESS_TEST_CONTENT_AVAILABLE}" = "true" ]; then
+    echo "Running Cypress tests with test content"
+    ddev cypress-headless
+else
+    echo "Skipping Cypress tests - no test content module"
+fi
 ```
 
 ### Testing Tools 🧪

@@ -93,6 +93,8 @@ pipelines:
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
               - ddev install-drupal
+              - # Source the environment variable from the file created by install-drupal
+              - if [ -f .cypress_test_content_status ]; then source .cypress_test_content_status; fi
               - if [ "${CYPRESS_TEST_CONTENT_AVAILABLE:-false}" = "false" ]; then
               -   echo "No test content found. Skipping Cypress tests..."
               -   exit 0

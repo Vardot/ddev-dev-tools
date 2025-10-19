@@ -96,11 +96,14 @@ for path in "${MODULE_PATHS[@]}"; do
 done
 
 if [ "$MODULE_FOUND" = true ]; then
-    export CYPRESS_TEST_CONTENT_AVAILABLE=true
     echo "✅ cypress_test_content module found at: $MODULE_LOCATION"
+    # Write the environment variable to a file for pipeline access
+    echo "export CYPRESS_TEST_CONTENT_AVAILABLE=true" > /var/www/html/.cypress_test_content_status
+    ddev drush pm:enable cypress_test_content -y
 else
-    export CYPRESS_TEST_CONTENT_AVAILABLE=false
     echo "❌ cypress_test_content module not found in filesystem"
+    # Write the environment variable to a file for pipeline access
+    echo "export CYPRESS_TEST_CONTENT_AVAILABLE=false" > /var/www/html/.cypress_test_content_status
 fi
 
 echo "👤 Creating site admin user..."
