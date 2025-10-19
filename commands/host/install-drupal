@@ -72,6 +72,37 @@ uninstall_if_enabled() {
 echo "⚙️  Disabling Captcha & Login destination modules"
 uninstall_if_enabled captcha login_destination honeypot
 
+# Check if cypress_test_content module exists in the filesystem.
+echo "🔍 Checking for cypress_test_content module in filesystem..."
+
+# Define possible module paths and info file extensions.
+MODULE_PATHS=(
+    "docroot/modules/custom/cypress_test_content"
+    "web/modules/custom/cypress_test_content"
+    "modules/custom/cypress_test_content"
+    "docroot/sites/all/modules/custom/cypress_test_content"
+    "sites/all/modules/custom/cypress_test_content"
+)
+
+MODULE_FOUND=false
+MODULE_LOCATION=""
+
+for path in "${MODULE_PATHS[@]}"; do
+    if [ -f "${path}/cypress_test_content.info.yml" ] || [ -f "${path}/cypress_test_content.info" ]; then
+        MODULE_FOUND=true
+        MODULE_LOCATION="$path"
+        break
+    fi
+done
+
+if [ "$MODULE_FOUND" = true ]; then
+    export CYPRESS_TEST_CONTENT_AVAILABLE=true
+    echo "✅ cypress_test_content module found at: $MODULE_LOCATION"
+else
+    export CYPRESS_TEST_CONTENT_AVAILABLE=false
+    echo "❌ cypress_test_content module not found in filesystem"
+fi
+
 echo "👤 Creating site admin user..."
 admin_user="admin"
 ddev drush user:create "$admin_user" --mail="admin@example.com" --password="password"

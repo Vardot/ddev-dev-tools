@@ -44,6 +44,7 @@ pipelines:
                   - STYLE_CHANGED_FILES=$STYLE_CHANGED_FILES
                   - TWIG_CHANGED_FILES=$TWIG_CHANGED_FILES
                   - TEXT_CHANGED_FILES=$TEXT_CHANGED_FILES
+                  - CYPRESS_TEST_CONTENT_AVAILABLE=\${CYPRESS_TEST_CONTENT_AVAILABLE:-false}
                 EOF
               - chmod 777 .ddev -R
               - chmod 777 docroot/sites/default -R
@@ -92,6 +93,10 @@ pipelines:
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
               - ddev install-drupal
+              - if [ "${CYPRESS_TEST_CONTENT_AVAILABLE:-false}" = "false" ]; then
+              -   echo "No test content found. Skipping Cypress tests..."
+              -   exit 0
+              - fi
               - ddev cypress-install
               - ddev cypress-headless
             after-script:

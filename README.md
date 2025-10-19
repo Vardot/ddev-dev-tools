@@ -28,6 +28,31 @@ This addon includes commonly used DDEV commands for Drupal development with focu
 - `dev-lint` - Run all linters on changed files
 - `dev-lint-all` - Run all linters on all files
 
+### Drupal Installation 🔧
+
+- `install-drupal` - Install Drupal using existing configuration with automatic module detection
+
+The `install-drupal` command automatically detects if the `cypress_test_content` module is physically present in your codebase filesystem and sets the `CYPRESS_TEST_CONTENT_AVAILABLE` environment variable accordingly. This can be used by your test scripts or CI/CD pipelines to conditionally enable or disable tests that depend on this module.
+
+The detection checks common Drupal module paths:
+- `docroot/modules/custom/cypress_test_content/`
+- `web/modules/custom/cypress_test_content/`
+- `modules/custom/cypress_test_content/`
+- `docroot/sites/all/modules/custom/cypress_test_content/` (Drupal 7)
+- `sites/all/modules/custom/cypress_test_content/` (Drupal 7)
+
+It supports both Drupal 8+ (`.info.yml`) and Drupal 7 (`.info`) module formats.
+
+**Example usage in test scripts:**
+```bash
+if [ "${CYPRESS_TEST_CONTENT_AVAILABLE}" = "true" ]; then
+    echo "Running tests with cypress_test_content module"
+    ddev cypress-headless --spec="cypress/e2e/content-tests.cy.js"
+else
+    echo "Skipping content tests - cypress_test_content module not available"
+fi
+```
+
 ## Installation
 
 ```bash
@@ -102,6 +127,7 @@ JS_CHANGED_FILES="file1.js,file2.js"
 STYLE_CHANGED_FILES="file1.css,file2.css"
 TWIG_CHANGED_FILES="file1.twig,file2.twig"
 TEXT_CHANGED_FILES="file1.md,file2.txt"
+CYPRESS_TEST_CONTENT_AVAILABLE="true"  # Set automatically by install-drupal command based on filesystem detection
 ```
 
 #### Option 2: Configuration File
