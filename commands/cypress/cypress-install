@@ -8,3 +8,5 @@
 export npm_config_cache=/tmp/.npm
 npm install @badeball/cypress-cucumber-preprocessor
 npm install @bahmutov/cypress-esbuild-preprocessor
+npm install cypress-file-upload
+npm install cypress-mochawesome-reporter
