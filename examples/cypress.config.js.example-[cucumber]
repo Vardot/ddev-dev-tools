@@ -9,9 +9,9 @@ module.exports = defineConfig({
   e2e: {
     specPattern: 'cypress/e2e/*.feature',
     excludeSpecPattern: [
-      'cypress/e2e/Clone Content Type.feature',
-      'cypress/e2e/Delete Content.feature',
-      'cypress/e2e/Edit Content.feature'
+      'cypress/e2e/clone_content_type.feature',
+      'cypress/e2e/delete_content.feature',
+      'cypress/e2e/edit_content.feature'
     ],
     async setupNodeEvents(on, config) {
       await addCucumberPreprocessorPlugin(on, config);

@@ -6,7 +6,7 @@
 ## Example: "ddev cypress-install"
 
 export npm_config_cache=/tmp/.npm
-npm install @badeball/cypress-cucumber-preprocessor
-npm install @bahmutov/cypress-esbuild-preprocessor
-npm install cypress-file-upload
-npm install cypress-mochawesome-reporter
+npm install @badeball/cypress-cucumber-preprocessor --include=optional
+npm install @bahmutov/cypress-esbuild-preprocessor --include=optional
+npm install cypress-file-upload --include=optional
+npm install cypress-mochawesome-reporter --include=optional

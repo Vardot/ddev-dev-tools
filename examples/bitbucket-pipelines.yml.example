@@ -31,7 +31,6 @@ pipelines:
               - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
               - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
               - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
-              # Check changed files
               - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
               - echo "No relevant files changed. Skipping Linting..."
               - else
@@ -88,6 +87,7 @@ pipelines:
               - chmod 777 docroot/sites/default -R
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
+              - ddev -v
               - ddev start
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
