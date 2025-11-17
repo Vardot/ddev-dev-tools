@@ -7,7 +7,8 @@
 get_changed_files() {
     local extensions=("$@")
     local ext_pattern=$(IFS='|'; echo "${extensions[*]}")
-    local custom_path_pattern="docroot/(modules|themes)/custom/.*"
+    local docroot=$(grep '^docroot:' .ddev/config.yaml | awk '{print $2}') || docroot="docroot"
+    local custom_path_pattern="$docroot/(modules|themes)/custom/.*"
     local changed_files=""
 
     # If we're in Bitbucket Pipelines
@@ -35,8 +36,9 @@ get_changed_files() {
 get_all_files() {
     local extensions=("$@")
     local ext_pattern=$(IFS='|'; echo "${extensions[*]}")
+    local docroot=$(grep '^docroot:' .ddev/config.yaml | awk '{print $2}') || docroot="docroot"
 
-    find docroot/modules/custom docroot/themes/custom -type f \
+    find $docroot/modules/custom $docroot/themes/custom -type f \
         -regextype posix-extended \
         -regex ".*\.($ext_pattern)$" \
         -not -path "*/node_modules/*" | tr '\n' ' '
