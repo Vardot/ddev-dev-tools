@@ -5,9 +5,9 @@
 
 # Function to detect document root (docroot or web)
 get_docroot() {
-    if [ -d "web/core" ] && [ -d "web/modules" ]; then
+    if [ -d "web/core" ]; then
         echo "web"
-    elif [ -d "docroot/core" ] && [ -d "docroot/modules" ]; then
+    elif [ -d "docroot/core" ]; then
         echo "docroot"
     else
         >&2 echo "❌ Error: Could not detect document root (neither web/ nor docroot/ found with core and modules)"
