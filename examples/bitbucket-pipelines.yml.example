@@ -59,6 +59,7 @@ pipelines:
               - rm -rf vendor/drupal/coder
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
+              - ddev exec "cd docroot/core; yarn install" || ddev exec "cd web/core; yarn install"
               - ddev dev-lint
               - fi
             after-script:
