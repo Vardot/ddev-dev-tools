@@ -3,11 +3,24 @@
 ## #ddev-generated
 # Description: Utility functions for file handling in DDEV commands
 
+# Function to detect document root (docroot or web)
+get_docroot() {
+    if [ -d "web/core" ]; then
+        echo "web"
+    elif [ -d "docroot/core" ]; then
+        echo "docroot"
+    else
+        >&2 echo "❌ Error: Could not detect document root (neither web/ nor docroot/ found with core and modules)"
+        exit 1
+    fi
+}
+
 # Function to get changed files based on extensions
 get_changed_files() {
     local extensions=("$@")
     local ext_pattern=$(IFS='|'; echo "${extensions[*]}")
-    local custom_path_pattern="docroot/(modules|themes)/custom/.*"
+    local docroot=$(get_docroot)
+    local custom_path_pattern="${docroot}/(modules|themes)/custom/.*"
     local changed_files=""
 
     # If we're in Bitbucket Pipelines
@@ -35,8 +48,9 @@ get_changed_files() {
 get_all_files() {
     local extensions=("$@")
     local ext_pattern=$(IFS='|'; echo "${extensions[*]}")
+    local docroot=$(get_docroot)
 
-    find docroot/modules/custom docroot/themes/custom -type f \
+    find ${docroot}/modules/custom ${docroot}/themes/custom -type f \
         -regextype posix-extended \
         -regex ".*\.($ext_pattern)$" \
         -not -path "*/node_modules/*" | tr '\n' ' '

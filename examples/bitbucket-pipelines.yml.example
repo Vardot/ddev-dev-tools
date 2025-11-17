@@ -26,11 +26,11 @@ pipelines:
               depth: full
             script:
               - git --version
-              - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
-              - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
-              - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
-              - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
-              - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E 'docroot/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
+              - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
+              - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
+              - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
+              - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
+              - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
               - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
               - echo "No relevant files changed. Skipping Linting..."
               - else
@@ -45,7 +45,7 @@ pipelines:
                   - TEXT_CHANGED_FILES=$TEXT_CHANGED_FILES
                 EOF
               - chmod 777 .ddev -R
-              - chmod 777 docroot/sites/default -R
+              - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
               - ddev -v
@@ -59,11 +59,12 @@ pipelines:
               - rm -rf vendor/drupal/coder
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
+              - ddev exec "if [ -d docroot/core ]; then cd docroot/core && yarn install; elif [ -d web/core ]; then cd web/core && yarn install; else echo 'Neither docroot/core nor web/core found'; exit 1; fi"
               - ddev dev-lint
               - fi
             after-script:
               - chmod 777 .ddev -R || true
-              - chmod 777 docroot/sites/default -R || true
+              - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
@@ -84,7 +85,7 @@ pipelines:
               -   exit 0
               - fi
               - chmod 777 .ddev -R
-              - chmod 777 docroot/sites/default -R
+              - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
               - ddev -v
@@ -96,7 +97,7 @@ pipelines:
               - ddev cypress-headless
             after-script:
               - chmod 777 .ddev -R || true
-              - chmod 777 docroot/sites/default -R || true
+              - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
