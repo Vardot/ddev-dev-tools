@@ -10,6 +10,7 @@ source "${0%/*}/dev-utils.sh"
 #          "ddev dev-stylelint --files=file1.css,file2.css" (checks specific files)
 
 set -euo pipefail
+docroot=$(grep '^docroot:' .ddev/config.yaml | awk '{print $2}') || docroot="docroot"
 
 # Define extensions for CSS files
 EXTENSIONS=("css")
@@ -35,7 +36,7 @@ if [ -f "./.stylelintrc.json" ]; then
     echo "Using local .stylelintrc.json"
     CONFIG="./.stylelintrc.json"
 else
-    CONFIG="docroot/core/.stylelintrc.json"
+    CONFIG="$docroot/core/.stylelintrc.json"
 fi
 
-node docroot/core/node_modules/stylelint/bin/stylelint.mjs --config "$CONFIG" --color --allow-empty-input $FILES
+node $docroot/core/node_modules/stylelint/bin/stylelint.mjs --config "$CONFIG" --color --allow-empty-input $FILES
