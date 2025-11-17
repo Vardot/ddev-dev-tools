@@ -10,6 +10,7 @@ source "${0%/*}/dev-utils.sh"
 #          "ddev dev-eslint --files=file1.js,file2.js" (checks specific files)
 
 set -euo pipefail
+docroot=$(grep '^docroot:' .ddev/config.yaml | awk '{print $2}') || docroot="docroot"
 
 # Define extensions for JS files
 EXTENSIONS=("js")
@@ -35,8 +36,8 @@ if [ -f "./.eslintrc.json" ]; then
     echo "Using local .eslintrc.json"
     CONFIG="./.eslintrc.json"
 else
-    CONFIG="docroot/core/.eslintrc.json"
+    CONFIG="$docroot/core/.eslintrc.json"
 fi
 
 # Run ESLint
-node docroot/core/node_modules/eslint/bin/eslint.js --config="$CONFIG" --no-eslintrc -f stylish --color $FILES
+node $docroot/core/node_modules/eslint/bin/eslint.js --config="$CONFIG" --no-eslintrc -f stylish --color $FILES
