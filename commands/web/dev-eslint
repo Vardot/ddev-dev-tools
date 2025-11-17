@@ -31,12 +31,15 @@ fi
 echo "Files to check:"
 echo "$FILES" | tr ' ' '\n'
 
+# Detect document root
+DOCROOT=$(get_docroot)
+
 if [ -f "./.eslintrc.json" ]; then
     echo "Using local .eslintrc.json"
     CONFIG="./.eslintrc.json"
 else
-    CONFIG="docroot/core/.eslintrc.json"
+    CONFIG="${DOCROOT}/core/.eslintrc.json"
 fi
 
 # Run ESLint
-node docroot/core/node_modules/eslint/bin/eslint.js --config="$CONFIG" --no-eslintrc -f stylish --color $FILES
+node ${DOCROOT}/core/node_modules/eslint/bin/eslint.js --config="$CONFIG" --no-eslintrc -f stylish --color $FILES
