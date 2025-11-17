@@ -10,6 +10,7 @@ source "${0%/*}/dev-utils.sh"
 #          "ddev dev-cspell --files=file1.php,file2.js" (checks specific files)
 
 set -euo pipefail
+docroot=$(grep '^docroot:' .ddev/config.yaml | awk '{print $2}') || docroot="docroot"
 
 # Define extensions for text files
 EXTENSIONS=("php" "module" "js" "css" "twig" "yml" "yaml" "json" "md" "txt")
@@ -35,7 +36,7 @@ if [ -f "./.cspell.json" ]; then
     echo "Using local .cspell.json"
     CONFIG="./.cspell.json"
 else
-    CONFIG="docroot/core/.cspell.json"
+    CONFIG="$docroot/core/.cspell.json"
 fi
 
-node docroot/core/node_modules/cspell/bin.mjs --config "$CONFIG" --color $FILES
+node $docroot/core/node_modules/cspell/bin.mjs --config "$CONFIG" --color $FILES
