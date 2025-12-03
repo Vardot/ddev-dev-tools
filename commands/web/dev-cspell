@@ -24,7 +24,7 @@ else
 fi
 
 if [ -z "${FILES:-}" ]; then
-    echo "❌ No files to check"
+    echo "✅ No files to check"
     exit 0
 fi
 

@@ -24,7 +24,7 @@ else
 fi
 
 if [ -z "${FILES:-}" ]; then
-    echo "❌ No PHP files to check"
+    echo "✅ No PHP files to check"
     exit 0
 fi
 
