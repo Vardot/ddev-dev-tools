@@ -75,7 +75,7 @@ get_files() {
     # Parse remaining arguments
     if [ "$#" -eq 0 ]; then
         # No flags - get changed files
-        >&2 echo "🔍 Checking git diff files..."
+        >&2 echo "🔄 Checking git diff files..."
         files=$(get_changed_files "${extensions[@]}")
     else
         case "$1" in
@@ -103,7 +103,7 @@ get_files() {
     fi
 
     if [ -z "${files// /}" ]; then
-        >&2 echo "❌ No matching files found"
+        >&2 echo "🚫 No matching files found"
         return 0
     fi
 
