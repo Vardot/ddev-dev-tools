@@ -52,5 +52,8 @@ fi
 echo "Files to check:"
 echo "$FILES" | tr ' ' '\n'
 
+# Check if phpcs is executable
+check_command_executable "$(command -v phpcs 2>/dev/null || echo '/var/www/html/bin/phpcs')" "phpcs"
+
 # Run PHPCS with Drupal standards
 phpcs -- -s --colors --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml --exclude=Drupal.Files.LineLength,Drupal.Files.TxtFileLineLength --report-full --report-summary $FILES

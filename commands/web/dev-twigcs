@@ -31,5 +31,8 @@ fi
 echo "🔍 Running TwigCS Fixer on files:"
 echo "$FILES" | tr ' ' '\n'
 
+# Check if twig-cs-fixer is executable
+check_command_executable "./bin/twig-cs-fixer" "twig-cs-fixer"
+
 # Run TwigCS Fixer
 ./bin/twig-cs-fixer lint $FILES

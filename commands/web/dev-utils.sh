@@ -3,6 +3,32 @@
 ## #ddev-generated
 # Description: Utility functions for file handling in DDEV commands
 
+# Function to check if a command is executable
+# Usage: check_command_executable "command_path" ["command_name"]
+# Returns: 0 if executable, exits with 1 if not executable or not found
+check_command_executable() {
+    local cmd_path="$1"
+    local cmd_name="${2:-$1}"
+
+    # Check if command exists
+    if [ ! -e "$cmd_path" ]; then
+        >&2 echo "❌ Error: Command not found: $cmd_name"
+        >&2 echo "   Path: $cmd_path"
+        >&2 echo "   Please ensure the required dependencies are installed."
+        exit 1
+    fi
+
+    # Check if command is executable
+    if [ ! -x "$cmd_path" ]; then
+        >&2 echo "❌ Error: Permission denied: $cmd_name is not executable"
+        >&2 echo "   Path: $cmd_path"
+        >&2 echo "   Fix: Run 'chmod +x $cmd_path' to make it executable"
+        exit 1
+    fi
+
+    return 0
+}
+
 # Function to detect document root (docroot or web)
 get_docroot() {
     if [ -d "web/core" ]; then

@@ -34,5 +34,8 @@ echo "$FILES" | tr ' ' '\n'
 # Ensure PHPStan and its Drupal extension are installed
 composer require --dev phpstan/phpstan phpstan/extension-installer mglaman/phpstan-drupal
 
+# Check if phpstan is executable
+check_command_executable "$(command -v phpstan 2>/dev/null || echo './vendor/bin/phpstan')" "phpstan"
+
 # Run PHPStan with specified level
 phpstan analyse $FILES
