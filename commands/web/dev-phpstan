@@ -11,6 +11,47 @@ source "${0%/*}/dev-utils.sh"
 
 set -euo pipefail
 
+# Function to generate phpstan.neon if it doesn't exist
+generate_phpstan_config() {
+    if [ ! -f "phpstan.neon" ]; then
+        echo "📝 Generating phpstan.neon configuration file..."
+        cat > phpstan.neon << 'EOF'
+# Configuration file for PHPStan static code checking, see https://phpstan.org .
+includes:
+  - phar://phpstan.phar/conf/bleedingEdge.neon
+
+parameters:
+
+  level: 2
+
+  paths:
+    - docroot/modules/custom
+    - docroot/themes/custom
+
+  excludePaths:
+    # Skip test fixtures.
+    - ../*/node_modules/*
+    - */tests/fixtures/*.php
+    - */tests/fixtures/*.php.gz
+
+  ignoreErrors:
+    # new static() is a best practice in Drupal, so we cannot fix that.
+    - "#^Unsafe usage of new static#"
+
+    # Ignore common errors for now.
+    - "#Drupal calls should be avoided in classes, use dependency injection instead#"
+    - "#^Plugin definitions cannot be altered.#"
+    - "#^Missing cache backend declaration for performance.#"
+    - "#cache tag might be unclear and does not contain the cache key in it.#"
+    - "#^Class .* extends @internal class#"
+EOF
+        echo "✅ Created phpstan.neon configuration file"
+    fi
+}
+
+# Generate phpstan.neon if it doesn't exist
+generate_phpstan_config
+
 # Define extensions for PHP files
 EXTENSIONS=("php" "module")
 
@@ -30,9 +71,6 @@ fi
 
 echo "🔍 Running PHPStan on files:"
 echo "$FILES" | tr ' ' '\n'
-
-# Ensure PHPStan and its Drupal extension are installed
-composer require --dev phpstan/phpstan phpstan/extension-installer mglaman/phpstan-drupal
 
 # Check if phpstan is executable
 check_command_executable "$(command -v phpstan 2>/dev/null || echo './vendor/bin/phpstan')" "phpstan"
