@@ -1,11 +1,20 @@
 #!/bin/bash
 
-## Description: Start DDEV and run Maven exec:java
+## #ddev-generated
+## Description: Run Drupal Java Crawler
 ## Usage: dev-crawler
 ## Example: "ddev dev-crawler"
 
-# Start DDEV
-ddev start
+# Check if Maven project exists, if not initialize it
+if [ ! -f "/var/www/html/.ddev/drupal_java_crawler/pom.xml" ]; then
+    echo "❌ Error: Java crawler files not found!"
+    echo "Please ensure the ddev-dev-tools addon is properly installed."
+    exit 1
+fi
 
-# Run Maven exec:java inside the web container
-ddev exec mvn exec:java
+# Navigate to the crawler directory
+cd /var/www/html/.ddev/drupal_java_crawler
+
+# Run Maven exec:java
+echo "Starting Drupal Java Crawler..."
+mvn exec:java

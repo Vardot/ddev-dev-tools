@@ -6,6 +6,7 @@ project_files:
   - docker-compose.cypress.yaml
   - commands/host/dev-lint-all
   - commands/host/install-drupal
+  - commands/web/dev-crawler
   - commands/web/dev-cspell
   - commands/web/dev-eslint
   - commands/web/dev-lint
@@ -18,6 +19,10 @@ project_files:
   - commands/cypress/cypress-headless
   - commands/cypress/cypress-install
   - commands/cypress/cypress-ui
+  - drupal_java_crawler/.gitignore
+  - drupal_java_crawler/README.md
+  - drupal_java_crawler/pom.xml
+  - drupal_java_crawler/src/main/java/org/example/DrupalCrawler.java
 
 post_install_actions:
   - ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
@@ -27,6 +32,13 @@ post_install_actions:
   - ddev exec composer require --dev phpstan/phpstan phpstan/extension-installer mglaman/phpstan-drupal
   - ddev exec sudo apt-get update -qq
   - ddev exec sudo apt-get install -y -qq openjdk-17-jdk maven
+  - |
+    #ddev-description:Compiling Java Crawler
+    if [ -d /var/www/html/.ddev/drupal_java_crawler ]; then
+      echo "Compiling Drupal Java Crawler..."
+      ddev exec "cd /var/www/html/.ddev/drupal_java_crawler && mvn clean compile -q"
+      echo "✓ Java Crawler compiled successfully!"
+    fi
   - |
     if [ -d /var/www/html/docroot/core ]; then
       ddev yarn --cwd /var/www/html/docroot/core/ install

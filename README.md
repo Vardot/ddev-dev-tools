@@ -28,6 +28,15 @@ This addon includes commonly used DDEV commands for Drupal development with focu
 - `dev-lint` - Run all linters on changed files
 - `dev-lint-all` - Run all linters on all files
 
+### Site Analysis 🔍
+
+- `dev-crawler` - Multi-threaded Java-based web crawler for analyzing Drupal sites
+  - Extract form fields and page structure
+  - Support for both headless (Jsoup) and headed (Selenium) modes
+  - Cookie-based authentication
+  - CSV export of results
+  - See [drupal_java_crawler/README.md](drupal_java_crawler/README.md) for details
+
 ### Drupal Installation 🔧
 
 - `install-drupal` - Install Drupal using existing configuration with automatic module detection
