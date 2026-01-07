@@ -25,6 +25,8 @@ post_install_actions:
   - ddev exec composer config allow-plugins.vincentlanglet/twig-cs-fixer true
   - ddev exec composer require --dev vincentlanglet/twig-cs-fixer:^3.0
   - ddev exec composer require --dev phpstan/phpstan phpstan/extension-installer mglaman/phpstan-drupal
+  - ddev exec sudo apt-get update -qq
+  - ddev exec sudo apt-get install -y -qq openjdk-17-jdk maven
   - |
     if [ -d /var/www/html/docroot/core ]; then
       ddev yarn --cwd /var/www/html/docroot/core/ install
