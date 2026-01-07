@@ -1,0 +1,11 @@
+#!/bin/bash
+
+## #ddev-generated
+## Description: Start DDEV and run Maven exec:java from host
+## Usage: dev-crawler
+
+# Start DDEV
+ddev start
+
+# Run Maven exec:java from the host
+cd drupal_java_crawler && mvn exec:java

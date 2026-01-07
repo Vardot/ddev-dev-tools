@@ -1,0 +1,38 @@
+name: drupalcrawler
+type: php
+docroot: ""
+php_version: "8.2"
+webserver_type: nginx-fpm
+router_http_port: "80"
+router_https_port: "443"
+xdebug_enabled: false
+additional_hostnames: []
+additional_fqdns: []
+database:
+  type: mysql
+  version: "8.0"
+use_dns_when_possible: true
+composer_version: "2"
+web_environment: []
+nodejs_version: "18"
+performance_mode: none
+disable_upload_dirs_warning: true
+
+hooks:
+  post-start:
+    - exec: |
+        if ! command -v java &> /dev/null; then
+          echo "Installing Java and Maven..."
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openjdk-17-jdk maven
+          echo "Java and Maven installed!"
+        fi
+    - exec: echo "================================================================"
+    - exec: echo "DrupalCrawler Environment Ready!"
+    - exec: echo "================================================================"
+    - exec: echo "Run the crawler with:"
+    - exec: echo "  ddev exec mvn exec:java"
+    - exec: echo "================================================================"
+
+
+

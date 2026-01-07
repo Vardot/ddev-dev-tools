@@ -1,0 +1,11 @@
+#!/bin/bash
+
+## Description: Start DDEV and run Maven exec:java
+## Usage: dev-crawler
+## Example: "ddev dev-crawler"
+
+# Start DDEV
+ddev start
+
+# Run Maven exec:java inside the web container
+ddev exec mvn exec:java
