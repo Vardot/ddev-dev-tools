@@ -15,6 +15,18 @@ fi
 # Navigate to the crawler directory
 cd /var/www/html/.ddev/drupal_java_crawler
 
+# Check if compiled, if not compile first
+if [ ! -d "target/classes" ]; then
+    echo "📦 Compiling Java Crawler for first use..."
+    mvn clean compile -q
+    if [ $? -ne 0 ]; then
+        echo "❌ Compilation failed. Please check the error messages above."
+        exit 1
+    fi
+    echo "✓ Compilation successful!"
+    echo ""
+fi
+
 # Run Maven exec:java
 echo "Starting Drupal Java Crawler..."
 mvn exec:java
