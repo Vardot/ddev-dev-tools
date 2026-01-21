@@ -30,6 +30,16 @@ if [ "${IS_CI:-false}" = "TRUE" ]; then
         echo "✅ Skipping PHP lint"
     fi
 
+    if [ -n "${PHP_CHANGED_FILES:-}" ]; then
+        echo "➡ PHP Static Analysis..."
+        echo "$PHP_CHANGED_FILES" | tr ' ' '\n'
+        if ! .ddev/commands/web/dev-phpstan --files="$PHP_CHANGED_FILES"; then
+            LINT_STATUS=1
+        fi
+    else
+        echo "✅ Skipping PHP static analysis"
+    fi
+
     if [ -n "${JS_CHANGED_FILES:-}" ]; then
         echo "➡ JS Linting..."
         echo "$JS_CHANGED_FILES" | tr ' ' '\n'
@@ -93,6 +103,11 @@ else
     # Run each tool with the same arguments
     echo "➡ PHP Linting..."
     if ! .ddev/commands/web/dev-phpcs $ARGS; then
+        LINT_STATUS=1
+    fi
+
+    echo "➡ PHP Static Analysis..."
+    if ! .ddev/commands/web/dev-phpstan $ARGS; then
         LINT_STATUS=1
     fi
 
