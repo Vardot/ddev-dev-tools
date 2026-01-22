@@ -15,6 +15,12 @@ if ! ddev dev-phpcs --all; then
     LINT_STATUS=1
 fi
 
+# Run PHPStan on all PHP files
+echo -e "\n➡ Running PHPStan..."
+if ! ddev dev-phpstan --all; then
+    LINT_STATUS=1
+fi
+
 # Run ESLint on all JS files
 echo -e "\n➡ Running ESLint..."
 if ! ddev dev-eslint --all; then
