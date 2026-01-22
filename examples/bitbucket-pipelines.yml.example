@@ -1,5 +1,5 @@
 #################
-# Version: 2.1.0
+# Version: 2.2.0
 #################
 triggers:
   pullrequest-push:
@@ -66,6 +66,7 @@ pipelines:
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
               - ddev exec "if [ -d docroot/core ]; then cd docroot/core && yarn install; elif [ -d web/core ]; then cd web/core && yarn install; else echo 'Neither docroot/core nor web/core found'; exit 1; fi"
+              - ddev yarn install
               - ddev dev-lint
               - fi
             after-script:
@@ -85,12 +86,6 @@ pipelines:
             clone:
               depth: full
             script:
-              - FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
-              - echo "Found $FEATURE_FILES .feature files in cypress folder"
-              - if [ "$FEATURE_FILES" -eq 0 ]; then
-              -   echo "No .feature files found. Skipping automated tests..."
-              -   exit 0
-              - fi
               - chmod 777 .ddev -R
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
@@ -102,8 +97,14 @@ pipelines:
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
               - ddev install-drupal
-              - ddev cypress-install
-              - ddev cypress-headless
+              - FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
+              - echo "Found $FEATURE_FILES .feature files in cypress folder"
+              - if [ "$FEATURE_FILES" -eq 0 ]; then
+              -   echo "No .feature files found. Skipping automated tests..."
+              - else
+              -   ddev cypress-install
+              -   ddev cypress-headless
+              - fi
             after-script:
               - chmod 777 .ddev -R || true
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
