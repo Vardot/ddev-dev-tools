@@ -24,7 +24,7 @@ else
         mapfile -t db_files < <(find ./backups -maxdepth 1 -type f -name "*.sql.gz")
         if [ ${#db_files[@]} -eq 0 ]; then
             echo "📥 No database backup files found!"
-            exit 1
+            exit 0
         elif [ ${#db_files[@]} -eq 1 ]; then
             selected_db="${db_files[0]}"
             echo "📥 Found one backup: $selected_db"
@@ -42,7 +42,7 @@ else
         ddev drush cr
     else
         echo "📥 Database backup not found!"
-        exit 1
+        exit 0
     fi
 fi
 
