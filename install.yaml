@@ -24,6 +24,7 @@ post_install_actions:
   - ddev exec composer require --dev drupal/coder:^8.3 dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer:^3.7
   - ddev exec composer config allow-plugins.vincentlanglet/twig-cs-fixer true
   - ddev exec composer require --dev vincentlanglet/twig-cs-fixer:^3.0
+  - ddev exec composer config allow-plugins.phpstan/extension-installer true
   - ddev exec composer require --dev phpstan/phpstan phpstan/extension-installer mglaman/phpstan-drupal
   - |
     if [ -d /var/www/html/docroot/core ]; then
