@@ -30,35 +30,7 @@ This addon includes commonly used DDEV commands for Drupal development with focu
 
 ### Drupal Installation 🔧
 
-- `install-drupal` - Install Drupal using existing configuration with automatic module detection
-
-The `install-drupal` command automatically detects if the `cypress_test_content` module is physically present in your codebase filesystem and sets the `CYPRESS_TEST_CONTENT_AVAILABLE` environment variable accordingly. This can be used by your test scripts or CI/CD pipelines to conditionally enable or disable tests that depend on this module.
-
-The detection checks common Drupal module paths:
-- `docroot/modules/custom/cypress_test_content/`
-- `web/modules/custom/cypress_test_content/`
-- `modules/custom/cypress_test_content/`
-- `docroot/sites/all/modules/custom/cypress_test_content/` (Drupal 7)
-- `sites/all/modules/custom/cypress_test_content/` (Drupal 7)
-
-It supports both Drupal 8+ (`.info.yml`) and Drupal 7 (`.info`) module formats.
-
-**Example usage in test scripts:**
-```bash
-# After running ddev install-drupal, source the status file
-if [ -f .cypress_test_content_status ]; then
-    source .cypress_test_content_status
-fi
-
-if [ "${CYPRESS_TEST_CONTENT_AVAILABLE}" = "true" ]; then
-    echo "Running tests with cypress_test_content module"
-    ddev cypress-headless --spec="cypress/e2e/content-tests.cy.js"
-else
-    echo "Skipping content tests - cypress_test_content module not available"
-fi
-```
-
-**Note**: The `install-drupal` command writes the environment variable to `.cypress_test_content_status` file for use by CI/CD pipelines and host environment scripts.
+- `install-drupal` - Install Drupal using existing configurations and a thin database
 
 ## Installation
 
