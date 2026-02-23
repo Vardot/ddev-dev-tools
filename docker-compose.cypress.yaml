@@ -1,28 +1,22 @@
 #ddev-generated
 services:
   cypress:
-    image: cypress/included:latest
     container_name: ddev-${DDEV_SITENAME}-cypress
+    hostname: ${DDEV_SITENAME}-cypress
+    image: cypress/included:15.10.0
     labels:
       com.ddev.site-name: ${DDEV_SITENAME}
-      com.ddev.approot: ${DDEV_APPROOT}
-    user: "${DDEV_UID}:${DDEV_GID}"
-    networks: [default, ddev_default]
-
-    tty: true
-
-    environment:
-      - CYPRESS_baseUrl=${DDEV_PRIMARY_URL}
-      - DISPLAY
-      - HOME=/root
-
-    volumes:
-      # Mount the project root to Cypress's project point
-      - "${DDEV_APPROOT}:/e2e"
-      # Mount DDEV to allow commands
-      - ".:/mnt/ddev_config"
-      # Allow X11 forwarding
-      - /tmp/.X11-unix:/tmp/.X11-unix
-
-    entrypoint: /bin/bash
+      com.ddev.approot: $DDEV_APPROOT
     working_dir: /e2e
+    user: "${UID:-1000}:${GID:-1000}"
+    ipc: host
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - CYPRESS_baseUrl=${DDEV_PRIMARY_URL}
+      - ELECTRON_EXTRA_LAUNCH_ARGS=--disable-gpu --disable-software-rasterizer
+    volumes:
+      - ..:/e2e:cached
+      - ".:/mnt/ddev_config"
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    entrypoint: []
+    command: ["tail", "-f", "/dev/null"]

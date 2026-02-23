@@ -5,4 +5,17 @@
 ## Usage: cypress-headless [arguments]
 ## Example: "ddev cypress-headless --browser chrome"
 
+# Use a random high display number to avoid conflicts
+DISPLAY_NUM=$((RANDOM % 100 + 100))
+rm -f /tmp/.X${DISPLAY_NUM}-lock 2>/dev/null
+
+Xvfb :${DISPLAY_NUM} -screen 0 1280x1024x24 -nolisten tcp &
+XVFB_PID=$!
+sleep 1
+
+export DISPLAY=:${DISPLAY_NUM}
 cypress run "$@"
+EXIT_CODE=$?
+
+kill $XVFB_PID 2>/dev/null
+exit $EXIT_CODE
