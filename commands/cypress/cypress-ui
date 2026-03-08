@@ -6,4 +6,30 @@
 ## Usage: cypress-ui [arguments]
 ## Example: "ddev cypress-ui --config cypress.json"
 
-cypress open --project . "$@"
+# Detect OS
+OS="$(uname -s)"
+
+case "$OS" in
+  Darwin*)
+    # macOS - try native display (Docker Desktop may handle this)
+    cypress open --project . "$@"
+    ;;
+  Linux*)
+    # Linux - check if host display is accessible
+    if [ -n "$DISPLAY" ] && command -v xdpyinfo >/dev/null 2>&1 && xdpyinfo -display "$DISPLAY" &>/dev/null; then
+      cypress open --project . "$@"
+    else
+      # Fall back to virtual framebuffer
+      Xvfb :99 -screen 0 1280x720x24 &
+      XVFB_PID=$!
+      export DISPLAY=:99
+      sleep 1
+      cypress open --project . "$@"
+      kill $XVFB_PID 2>/dev/null
+    fi
+    ;;
+  *)
+    # Unknown OS - try direct execution
+    cypress open --project . "$@"
+    ;;
+esac
