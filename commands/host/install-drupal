@@ -5,7 +5,23 @@
 set -euo pipefail
 
 ## Description: Install Drupal using existing configuration
-## Usage: install-drupal
+## Usage: install-drupal [--uninstall-modules "module1 module2 ..."]
+
+# Parse command line arguments
+additional_modules=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --uninstall-modules|-u)
+      additional_modules="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: install-drupal [--uninstall-modules \"module1 module2 ...\"]"
+      exit 1
+      ;;
+  esac
+done
 
 echo "🛠️ Installing Drupal..."
 ddev composer install --optimize-autoloader
@@ -70,7 +86,12 @@ uninstall_if_enabled() {
 }
 
 echo "⚙️  Disabling Captcha & Login destination modules"
-uninstall_if_enabled captcha login_destination honeypot
+modules_to_uninstall="captcha login_destination honeypot antibot"
+if [ -n "$additional_modules" ]; then
+  modules_to_uninstall="$modules_to_uninstall $additional_modules"
+  echo "Additional modules to uninstall: $additional_modules"
+fi
+uninstall_if_enabled $modules_to_uninstall
 
 echo "👤 Creating site admin user..."
 admin_user="admin"
