@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ## Description: Run PHPUnit tests
-## Usage: phpunit
+## Usage: dev-phpunit
 
 echo "🚦 Running PHPUnit tests..."
 if [ -f /var/www/html/phpunit.xml ]; then
