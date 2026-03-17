@@ -1,0 +1,30 @@
+#!/bin/bash
+set -euo pipefail
+
+## Description: Run PHPUnit tests
+## Usage: phpunit
+
+echo "🚦 Running PHPUnit tests..."
+if [ -f /var/www/html/phpunit.xml ]; then
+    CONFIG="/var/www/html/phpunit.xml"
+elif [ -f /var/www/html/phpunit.xml.dist ]; then
+    CONFIG="/var/www/html/phpunit.xml.dist"
+elif [ -f /var/www/html/docroot/core/phpunit.xml.dist ]; then
+    CONFIG="/var/www/html/docroot/core/phpunit.xml.dist"
+elif [ -f /var/www/html/web/core/phpunit.xml.dist ]; then
+    CONFIG="/var/www/html/web/core/phpunit.xml.dist"
+else
+    echo "❌ No phpunit.xml configuration found."
+    exit 1
+fi
+
+if [ -d /var/www/html/docroot/modules/custom ]; then
+    TEST_DIR="./docroot/modules/custom/"
+elif [ -d /var/www/html/web/modules/custom ]; then
+    TEST_DIR="./web/modules/custom/"
+else
+    echo "❌ No custom modules directory found."
+    exit 1
+fi
+
+phpunit -c "$CONFIG" "$TEST_DIR" --colors=always --testdox
