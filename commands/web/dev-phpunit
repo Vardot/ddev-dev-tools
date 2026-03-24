@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+## #ddev-generated
 ## Description: Run PHPUnit tests
 ## Usage: dev-phpunit
 
