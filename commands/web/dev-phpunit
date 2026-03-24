@@ -4,6 +4,12 @@ set -euo pipefail
 ## Description: Run PHPUnit tests
 ## Usage: dev-phpunit
 
+# Ensure drupal/core-dev is installed (required for PHPUnit)
+if ! composer show drupal/core-dev &>/dev/null; then
+    echo "❌ drupal/core-dev is not installed. Please install it to run PHPUnit tests."
+    exit 1
+fi
+
 echo "🚦 Running PHPUnit tests..."
 if [ -f /var/www/html/phpunit.xml ]; then
     CONFIG="/var/www/html/phpunit.xml"
