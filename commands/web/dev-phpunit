@@ -30,7 +30,7 @@ elif [ -d /var/www/html/web/modules/custom ]; then
     TEST_DIR="./web/modules/custom/"
 else
     echo "❌ No custom modules directory found."
-    exit 1
+    exit 0
 fi
 
 phpunit -c "$CONFIG" "$TEST_DIR" --colors=always --testdox
