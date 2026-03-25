@@ -97,6 +97,7 @@ pipelines:
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
               - ddev install-drupal
+              - ddev dev-phpunit
               - FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
               - echo "Found $FEATURE_FILES .feature files in cypress folder"
               - if [ "$FEATURE_FILES" -eq 0 ]; then
@@ -105,6 +106,9 @@ pipelines:
               -   ddev cypress-install
               -   ddev cypress-headless
               - fi
+            artifacts:
+              - cypress/screenshots/**
+              - cypress/videos/**
             after-script:
               - chmod 777 .ddev -R || true
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
