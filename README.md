@@ -200,6 +200,9 @@ fi
   - `cypress-run` - Run Cypress tests in headless mode
   - `cypress-install` - Install additional npm packages for Cucumber support
 
+- **PHPUnit**
+  - `dev-phpunit` - Run PHPUnit tests on custom modules
+
 It's recommended to run ddev cypress-open first to create configuration and support files. This addon sets CYPRESS_baseUrl to DDEV's primary URL in the docker-compose.cypress.yaml.
 
 **Note:** This addon uses the latest official Cypress Docker image to ensure up-to-date testing capabilities and compatibility.
@@ -229,6 +232,7 @@ Feature: User Login
 
 The addon includes example configurations:
 - `cypress.config.js.example-[cucumber]` - Configuration with Cucumber/Gherkin support
+- `phpunit.xml.example` - PHPUnit configuration for Drupal testing
 
 ### Cypress Usage
 
@@ -257,3 +261,48 @@ xhost +
 
 **Windows:**
 Install [GWSL](https://www.microsoft.com/en-us/p/gwsl/9nl6kd1h33v3) or [VcXsrv](https://sourceforge.net/projects/vcxsrv/)
+
+### PHPUnit Testing
+
+Run PHPUnit tests on your custom Drupal modules.
+
+#### Prerequisites
+
+PHPUnit requires `drupal/core-dev` to be installed:
+
+```bash
+ddev composer require --dev drupal/core-dev --with-all-dependencies
+```
+
+#### Configuration
+
+1. Copy the example configuration to your project root:
+```bash
+cp examples/phpunit.xml.example phpunit.xml
+```
+
+2. Customize the configuration as needed:
+   - Update `SIMPLETEST_BASE_URL` if using a different local URL
+   - Modify database connection in `SIMPLETEST_DB`
+   - Adjust `BROWSERTEST_OUTPUT_DIRECTORY` for test output location
+   - Configure coverage paths to include/exclude specific directories
+
+#### Running Tests
+
+```bash
+ddev dev-phpunit
+```
+
+This command will:
+- Check if `drupal/core-dev` is installed
+- Locate your PHPUnit configuration file (`phpunit.xml`, `phpunit.xml.dist`, or core's default)
+- Run tests on custom modules in `docroot/modules/custom/` or `web/modules/custom/`
+- Display results with colors and test documentation format
+
+#### Configuration File Search Order
+
+The command searches for configuration files in this order:
+1. `/var/www/html/phpunit.xml`
+2. `/var/www/html/phpunit.xml.dist`
+3. `/var/www/html/docroot/core/phpunit.xml.dist`
+4. `/var/www/html/web/core/phpunit.xml.dist`

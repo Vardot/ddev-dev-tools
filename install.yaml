@@ -11,6 +11,7 @@ project_files:
   - commands/web/dev-lint
   - commands/web/dev-phpcs
   - commands/web/dev-phpstan
+  - commands/web/dev-phpunit
   - commands/web/dev-stylelint
   - commands/web/dev-twigcs
   - commands/web/dev-utils.sh
