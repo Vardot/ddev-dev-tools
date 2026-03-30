@@ -5,12 +5,11 @@ set -euo pipefail
 ## Description: Run PHPUnit tests
 ## Usage: dev-phpunit
 
-# Ensure drupal/core-dev is installed (required for PHPUnit)
+# Ensure drupal/core-dev is installed (recommended for PHPUnit)
 if ! composer show drupal/core-dev &>/dev/null; then
-    echo "❌ drupal/core-dev is not installed. Please install it to run PHPUnit tests."
+    echo "⚠️ Warning: drupal/core-dev is not installed. Some PHPUnit tests may not work properly."
     echo "👉 You can install it with dependencies using:"
     echo "   ddev composer require --dev drupal/core-dev --with-all-dependencies"
-    exit 1
 fi
 
 echo "🚦 Running PHPUnit tests..."
