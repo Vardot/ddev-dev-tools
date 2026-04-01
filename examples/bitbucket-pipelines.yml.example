@@ -1,5 +1,5 @@
 #################
-# Version: 2.2.1
+# Version: 2.2.2
 #################
 triggers:
   pullrequest-push:
@@ -55,8 +55,11 @@ pipelines:
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
               - ddev -v
-              - ddev stop --unlist --all --omit-snapshot --remove-data
-              - yes | ddev delete --all --omit-snapshot
+              - ddev poweroff || true
+              - ddev stop --unlist --all --omit-snapshot --remove-data || true
+              - ddev delete --omit-snapshot --yes || true
+              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
+              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
               - ddev start
               - ddev composer config --global github-oauth.github.com $GITHUB_TOKEN
               - ddev composer install --optimize-autoloader
@@ -74,8 +77,11 @@ pipelines:
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
+              - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev delete --omit-snapshot --yes || true
+              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
+              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
         - step:
             name: 🚀 Install Drupal & Run Automated Tests
             runs-on:
@@ -91,13 +97,15 @@ pipelines:
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
               - ddev -v
-              - ddev stop --unlist --all --omit-snapshot --remove-data
-              - yes | ddev delete --all --omit-snapshot
+              - ddev poweroff || true
+              - ddev stop --unlist --all --omit-snapshot --remove-data || true
+              - ddev delete --omit-snapshot --yes || true
+              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
+              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
               - ddev start
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
               - ddev install-drupal
-              - ddev dev-phpunit
               - FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
               - echo "Found $FEATURE_FILES .feature files in cypress folder"
               - if [ "$FEATURE_FILES" -eq 0 ]; then
@@ -114,5 +122,8 @@ pipelines:
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
+              - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev delete --omit-snapshot --yes || true
+              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
+              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
