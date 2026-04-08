@@ -1,5 +1,5 @@
 #################
-# Version: 2.2.2
+# Version: 2.2.3
 #################
 triggers:
   pullrequest-push:
@@ -58,9 +58,8 @@ pipelines:
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev delete --omit-snapshot --yes || true
-              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
-              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
               - ddev start
+              - ddev auth ssh
               - ddev composer config --global github-oauth.github.com $GITHUB_TOKEN
               - ddev composer install --optimize-autoloader
               - echo "Cleaning up old .ddev command files & Drupal coder"
@@ -80,8 +79,13 @@ pipelines:
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev delete --omit-snapshot --yes || true
-              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
-              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
+            final:
+              name: 🧹 Cleanup
+              script:
+                - ddev poweroff || true
+                - ddev stop --unlist --all --omit-snapshot --remove-data || true
+                - ddev delete --omit-snapshot --yes || true
+                - chmod 777 $BITBUCKET_CLONE_DIR -R || true
         - step:
             name: 🚀 Install Drupal & Run Automated Tests
             runs-on:
@@ -100,12 +104,12 @@ pipelines:
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev delete --omit-snapshot --yes || true
-              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
-              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
               - ddev start
+              - ddev auth ssh
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
               - ddev install-drupal
+              - ddev dev-phpunit
               - FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
               - echo "Found $FEATURE_FILES .feature files in cypress folder"
               - if [ "$FEATURE_FILES" -eq 0 ]; then
@@ -125,5 +129,10 @@ pipelines:
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev delete --omit-snapshot --yes || true
-              - docker ps -aq --filter "name=ddev-" | xargs -r docker rm -f || true
-              - docker volume ls -q | grep '^ddev-' | xargs -r docker volume rm -f || true
+            final:
+              name: 🧹 Cleanup
+              script:
+                - ddev poweroff || true
+                - ddev stop --unlist --all --omit-snapshot --remove-data || true
+                - ddev delete --omit-snapshot --yes || true
+                - chmod 777 $BITBUCKET_CLONE_DIR -R || true
