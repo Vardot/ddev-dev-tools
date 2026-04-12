@@ -33,11 +33,12 @@ pipelines:
             script:
               - git --version
               - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
+              - SECURITY_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '((docroot|web)/(modules|themes)/custom/.*\.(php|module|inc|install|theme|yml|yaml|twig))|(config/.*\.(yml|yaml))' | tr '\n' ' ')
               - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
               - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
               - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
               - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
-              - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
+              - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$SECURITY_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
               - echo "No relevant files changed. Skipping Linting..."
               - else
               - |
@@ -45,6 +46,7 @@ pipelines:
                 web_environment:
                   - IS_CI=TRUE
                   - PHP_CHANGED_FILES=$PHP_CHANGED_FILES
+                  - SECURITY_CHANGED_FILES=$SECURITY_CHANGED_FILES
                   - JS_CHANGED_FILES=$JS_CHANGED_FILES
                   - STYLE_CHANGED_FILES=$STYLE_CHANGED_FILES
                   - TWIG_CHANGED_FILES=$TWIG_CHANGED_FILES

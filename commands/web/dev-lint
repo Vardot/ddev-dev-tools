@@ -40,6 +40,16 @@ if [ "${IS_CI:-false}" = "TRUE" ]; then
         echo "✅ Skipping PHP static analysis"
     fi
 
+    if [ -n "${SECURITY_CHANGED_FILES:-}" ]; then
+        echo "➡ Drupal Security PHPCS..."
+        echo "$SECURITY_CHANGED_FILES" | tr ' ' '\n'
+        if ! .ddev/commands/web/dev-phpcs-security --files="$SECURITY_CHANGED_FILES"; then
+            LINT_STATUS=1
+        fi
+    else
+        echo "✅ Skipping Drupal Security PHPCS"
+    fi
+
     if [ -n "${JS_CHANGED_FILES:-}" ]; then
         echo "➡ JS Linting..."
         echo "$JS_CHANGED_FILES" | tr ' ' '\n'
@@ -108,6 +118,11 @@ else
 
     echo "➡ PHP Static Analysis..."
     if ! .ddev/commands/web/dev-phpstan $ARGS; then
+        LINT_STATUS=1
+    fi
+
+    echo "➡ Drupal Security PHPCS..."
+    if ! .ddev/commands/web/dev-phpcs-security $ARGS; then
         LINT_STATUS=1
     fi
 
