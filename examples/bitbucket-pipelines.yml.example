@@ -33,7 +33,7 @@ pipelines:
             script:
               - git --version
               - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
-              - SECURITY_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '((docroot|web)/(modules|themes)/custom/.*\.(php|module|inc|install|theme|yml|yaml|twig))|(config/.*\.(yml|yaml))' | tr '\n' ' ')
+              - SECURITY_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '((docroot|web)/(modules|themes)/custom/.*\.(php|module|inc|install|theme|yml|yaml|twig))|(config/.*\.(yml|yaml))|((docroot|web)/sites/.*/settings[^/]*\.php)' | tr '\n' ' ')
               - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
               - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
               - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
