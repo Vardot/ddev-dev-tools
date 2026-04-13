@@ -3,7 +3,7 @@
 source "${0%/*}/dev-utils.sh"
 
 ## #ddev-generated
-## Description: Run DrupalSecurity PHPCS checks on custom code and config
+## Description: Run DrupalSecurity PHPCS checks on custom code, config, and settings files
 # Usage: ddev dev-phpcs-security [--all] [--files=file1.php,file2.yml]
 # Example: "ddev dev-phpcs-security" (checks git diff)
 #          "ddev dev-phpcs-security --all" (checks all matching files)
@@ -39,10 +39,11 @@ get_security_changed_files() {
     docroot=$(get_docroot)
     local custom_path_pattern="^${docroot}/(modules|themes)/custom/.*\.(${ext_pattern})$"
     local config_path_pattern="^config/.*\.(${ext_pattern})$"
+    local settings_path_pattern="^${docroot}/sites/.*/settings[^/]*\.php$"
 
     if [ "${IS_CI:-false}" = "TRUE" ]; then
         git diff --name-only "origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH" 2>/dev/null |
-            grep -E "${custom_path_pattern}|${config_path_pattern}" |
+            grep -E "${custom_path_pattern}|${config_path_pattern}|${settings_path_pattern}" |
             grep -v "node_modules" |
             sort -u | tr '\n' ' '
     else
@@ -50,7 +51,7 @@ get_security_changed_files() {
             git diff --name-only 2>/dev/null
             git diff --name-only --staged 2>/dev/null
         } |
-            grep -E "${custom_path_pattern}|${config_path_pattern}" |
+            grep -E "${custom_path_pattern}|${config_path_pattern}|${settings_path_pattern}" |
             grep -v "node_modules" |
             sort -u | tr '\n' ' '
     fi
@@ -71,6 +72,9 @@ get_security_all_files() {
         find config -type f \
             -regextype posix-extended \
             -regex ".*\.(${ext_pattern})$"
+        find "${docroot}/sites" -type f \
+            -regextype posix-extended \
+            -regex ".*/settings[^/]*\.php$"
     } 2>/dev/null | sort -u | tr '\n' ' '
 }
 
