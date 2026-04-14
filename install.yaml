@@ -10,6 +10,7 @@ project_files:
   - commands/web/dev-eslint
   - commands/web/dev-lint
   - commands/web/dev-phpcs
+  - commands/web/dev-phpcs-security
   - commands/web/dev-phpstan
   - commands/web/dev-phpunit
   - commands/web/dev-stylelint
@@ -23,7 +24,7 @@ project_files:
 post_install_actions:
   - ddev composer install --no-interaction
   - ddev exec composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-  - ddev exec composer require --dev drupal/coder:^8.3 dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer:^3.7
+  - ddev exec composer require --dev drupal/coder:^8.3 dealerdirect/phpcodesniffer-composer-installer squizlabs/php_codesniffer:^3.7 mingsong-hu/drupalsecurity:^1.0
   - ddev exec composer config allow-plugins.vincentlanglet/twig-cs-fixer true
   - ddev exec composer require --dev vincentlanglet/twig-cs-fixer:^3.0
   - ddev exec composer config allow-plugins.phpstan/extension-installer true
