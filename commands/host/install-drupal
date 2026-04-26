@@ -101,7 +101,7 @@ if ddev drush role:list | grep -q '^site_admin'; then
     ddev drush user:role:add "site_admin" "$admin_user"
 else
     # Find any role containing 'admin'
-    admin_roles=$(ddev drush role:list | grep 'admin' | awk '{print $1}')
+    admin_roles=$(ddev drush role:list --format=list | grep 'admin' | awk '{print $1}')
     if [ -n "$admin_roles" ]; then
         for role in $admin_roles; do
             ddev drush user:role:add "$role" "$admin_user"
