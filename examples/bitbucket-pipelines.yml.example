@@ -1,6 +1,15 @@
 #################
-# Version: 2.2.3
+# Version: 2.2.4
 #################
+definitions:
+  caches:
+    composer-cache: ~/.composer/cache
+    ddev-vendor: vendor
+    yarn-cache: ~/.cache/yarn
+    project-node-modules: node_modules
+    core-node-modules: docroot/core/node_modules
+    web-core-node-modules: web/core/node_modules
+
 triggers:
   pullrequest-push:
     - condition: BITBUCKET_PR_DESTINATION_BRANCH == "dev" || BITBUCKET_PR_DESTINATION_BRANCH == "development" || BITBUCKET_PR_DESTINATION_BRANCH == "stg" || BITBUCKET_PR_DESTINATION_BRANCH == "staging" || BITBUCKET_PR_DESTINATION_BRANCH == "uat" || BITBUCKET_PR_DESTINATION_BRANCH == "master" || BITBUCKET_PR_DESTINATION_BRANCH == "production" || BITBUCKET_PR_DESTINATION_BRANCH == "main" || glob(BITBUCKET_PR_DESTINATION_BRANCH, "release/*")
@@ -30,15 +39,20 @@ pipelines:
               - worker
             clone:
               depth: full
+            caches:
+              - composer-cache
+              - yarn-cache
+              - project-node-modules
+              - core-node-modules
+              - web-core-node-modules
             script:
               - git --version
-              - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
-              - SECURITY_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '((docroot|web)/(modules|themes)/custom/.*\.(php|module|inc|install|theme|yml|yaml|twig))|(config/.*\.(yml|yaml))|((docroot|web)/sites/.*/settings[^/]*\.php)' | tr '\n' ' ')
-              - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
-              - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
-              - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
-              - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
-              - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$SECURITY_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
+              - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(php|module)$' | tr '\\n' ' ')
+              - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(js)$' | tr '\\n' ' ')
+              - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(css)$' | tr '\\n' ' ')
+              - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(twig)$' | tr '\\n' ' ')
+              - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\\n' ' ')
+              - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
               - echo "No relevant files changed. Skipping Linting..."
               - else
               - |
@@ -46,7 +60,6 @@ pipelines:
                 web_environment:
                   - IS_CI=TRUE
                   - PHP_CHANGED_FILES=$PHP_CHANGED_FILES
-                  - SECURITY_CHANGED_FILES=$SECURITY_CHANGED_FILES
                   - JS_CHANGED_FILES=$JS_CHANGED_FILES
                   - STYLE_CHANGED_FILES=$STYLE_CHANGED_FILES
                   - TWIG_CHANGED_FILES=$TWIG_CHANGED_FILES
@@ -59,7 +72,6 @@ pipelines:
               - ddev -v
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
-              - ddev delete --omit-snapshot --yes || true
               - ddev start
               - ddev auth ssh
               - ddev composer config --global github-oauth.github.com $GITHUB_TOKEN
@@ -68,7 +80,7 @@ pipelines:
               - find .ddev/commands -type f ! -name 'ddev-lint' -delete
               - rm -rf vendor/drupal/coder
               - ddev add-on get Vardot/ddev-dev-tools
-              - ddev restart
+              - if [ "$PIPELINES_IS_COREPACKAGE_ENABLED" = "TRUE" ]; then ddev exec "corepack enable"; fi
               - ddev exec "if [ -d docroot/core ]; then cd docroot/core && yarn install; elif [ -d web/core ]; then cd web/core && yarn install; else echo 'Neither docroot/core nor web/core found'; exit 1; fi"
               - ddev yarn install
               - ddev dev-lint
@@ -80,14 +92,6 @@ pipelines:
               - export DOCKER_BUILDKIT=1
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
-              - ddev delete --omit-snapshot --yes || true
-            final:
-              name: 🧹 Cleanup
-              script:
-                - ddev poweroff || true
-                - ddev stop --unlist --all --omit-snapshot --remove-data || true
-                - ddev delete --omit-snapshot --yes || true
-                - chmod 777 $BITBUCKET_CLONE_DIR -R || true
         - step:
             name: 🚀 Install Drupal & Run Automated Tests
             runs-on:
@@ -97,6 +101,12 @@ pipelines:
               - worker
             clone:
               depth: full
+            caches:
+              - composer-cache
+              - yarn-cache
+              - project-node-modules
+              - core-node-modules
+              - web-core-node-modules
             script:
               - chmod 777 .ddev -R
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
@@ -105,7 +115,6 @@ pipelines:
               - ddev -v
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
-              - ddev delete --omit-snapshot --yes || true
               - ddev start
               - ddev auth ssh
               - ddev add-on get Vardot/ddev-dev-tools
@@ -123,6 +132,7 @@ pipelines:
             artifacts:
               - cypress/screenshots/**
               - cypress/videos/**
+              - cypress/results/**
             after-script:
               - chmod 777 .ddev -R || true
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
@@ -130,11 +140,3 @@ pipelines:
               - export DOCKER_BUILDKIT=1
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
-              - ddev delete --omit-snapshot --yes || true
-            final:
-              name: 🧹 Cleanup
-              script:
-                - ddev poweroff || true
-                - ddev stop --unlist --all --omit-snapshot --remove-data || true
-                - ddev delete --omit-snapshot --yes || true
-                - chmod 777 $BITBUCKET_CLONE_DIR -R || true
