@@ -195,6 +195,10 @@ fi
 ```
 
 ### Testing Tools 🧪
+- **Playwright**
+  - `playwright-install` - Install Playwright project dependencies from `tests/`
+  - `playwright-test` - Run Playwright tests inside the Playwright container
+  - `dev-playwright` - Smart wrapper that detects tests and changed modules
 - **Cypress**
   - `cypress-open` - Open interactive Cypress window
   - `cypress-run` - Run Cypress tests in headless mode
@@ -202,6 +206,70 @@ fi
 
 - **PHPUnit**
   - `dev-phpunit` - Run PHPUnit tests on custom modules
+
+### Playwright Testing 🎭
+
+This addon includes a dedicated Playwright container and command set for running browser tests in a DDEV-friendly way.
+
+#### What it adds
+
+- A `playwright` service based on the official Microsoft Playwright image
+- A `ddev playwright-install` command that installs project dependencies from `tests/`
+- A `ddev playwright-test` command that runs Playwright directly inside the container
+- A `ddev dev-playwright` command that adds smart CI/local behavior on top of the raw test runner
+
+#### Project layout
+
+Playwright is expected to live under `tests/playwright/` in your project. The smart runner looks for test files such as:
+
+- `*.spec.*`
+- `*.test.*`
+- `*.cy.*`
+
+If those files exist, `ddev dev-playwright` runs Playwright. If not, your pipeline can fall back to Cypress or skip automated tests entirely.
+
+#### Install and run
+
+```bash
+# Install dependencies for the Playwright project
+ddev playwright-install
+
+# Run all Playwright tests
+ddev playwright-test
+
+# Run through the smart wrapper
+ddev dev-playwright
+```
+
+#### Common flags
+
+```bash
+ddev dev-playwright --all
+ddev dev-playwright --production
+ddev dev-playwright --grep=@smoke
+ddev dev-playwright --has-tests
+```
+
+- `--all` runs the full Playwright suite.
+- `--production` runs the suite excluding `@slow` tests.
+- `--grep=<pattern>` runs a custom tag or name filter.
+- `--has-tests` is useful in CI to decide whether to continue with expensive setup steps.
+
+#### Smart CI behavior
+
+`ddev dev-playwright` supports two useful CI behaviors:
+
+- It checks for Playwright test files before running the suite.
+- In CI, it can derive `@feature-<module>` tags from changed custom Drupal modules and combine them with `@smoke`.
+
+That lets you keep your pipeline logic thin while still avoiding unnecessary installs or test runs.
+
+#### Playwright configuration
+
+The Playwright container exposes the primary DDEV URL as `PLAYWRIGHT_BASE_URL`.
+If your test app needs credentials, the container also provides Drupal login defaults through environment variables.
+
+Place your Playwright config under `tests/` so the addon can discover it automatically.
 
 It's recommended to run ddev cypress-open first to create configuration and support files. This addon sets CYPRESS_baseUrl to DDEV's primary URL in the docker-compose.cypress.yaml.
 
