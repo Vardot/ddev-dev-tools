@@ -105,7 +105,8 @@ if [ -n "$CUSTOM_GREP" ]; then
         exit 0
     fi
     echo "🚀 Running Playwright tests matching: $CUSTOM_GREP"
-    ddev playwright-test --grep "$CUSTOM_GREP"
+    SAFE_CUSTOM_GREP=${CUSTOM_GREP//|/\\|}
+    ddev playwright-test --grep "$SAFE_CUSTOM_GREP"
     exit $?
 fi
 
@@ -143,10 +144,10 @@ else
 fi
 
 # Check for matching tests independently
-SMOKE_MATCHES=$(grep -rEl "@smoke" tests/playwright/e2e/ 2>/dev/null | wc -l || echo 0)
+SMOKE_MATCHES=$( (grep -rEl "@smoke" tests/playwright/e2e/ 2>/dev/null || true) | wc -l )
 FEATURE_MATCHES=0
 if [ -n "$FEATURE_TAGS" ]; then
-    FEATURE_MATCHES=$(grep -rEl "$FEATURE_TAGS" tests/playwright/e2e/ 2>/dev/null | wc -l || echo 0)
+    FEATURE_MATCHES=$( (grep -rEl "$FEATURE_TAGS" tests/playwright/e2e/ 2>/dev/null || true) | wc -l )
 fi
 
 if [ "$SMOKE_MATCHES" -eq 0 ] && [ "$FEATURE_MATCHES" -eq 0 ]; then
@@ -156,8 +157,13 @@ if [ "$SMOKE_MATCHES" -eq 0 ] && [ "$FEATURE_MATCHES" -eq 0 ]; then
     exit 0
 fi
 
-PLAYWRIGHT_GREP="@smoke"
-[ -n "$FEATURE_TAGS" ] && PLAYWRIGHT_GREP="$PLAYWRIGHT_GREP|$FEATURE_TAGS"
+# Prefer feature-tagged tests when any are available.
+# Fall back to smoke tests only when there are no feature matches.
+if [ "$FEATURE_MATCHES" -gt 0 ] && [ -n "$FEATURE_TAGS" ]; then
+    PLAYWRIGHT_GREP="$FEATURE_TAGS"
+else
+    PLAYWRIGHT_GREP="@smoke"
+fi
 
 echo "   Tags to run (smoke=$SMOKE_MATCHES, feature=$FEATURE_MATCHES): $PLAYWRIGHT_GREP"
 
@@ -167,4 +173,5 @@ if [ "$HAS_TESTS_CHECK" = "true" ]; then
 fi
 
 echo "🚀 Running Playwright tests for: $PLAYWRIGHT_GREP"
-ddev playwright-test --grep "$PLAYWRIGHT_GREP"
+SAFE_PLAYWRIGHT_GREP=${PLAYWRIGHT_GREP//|/\\|}
+ddev playwright-test --grep "$SAFE_PLAYWRIGHT_GREP"
