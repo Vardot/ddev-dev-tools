@@ -1,0 +1,21 @@
+#ddev-generated
+services:
+  playwright:
+    container_name: ddev-${DDEV_SITENAME}-playwright
+    hostname: ${DDEV_SITENAME}-playwright
+    image: mcr.microsoft.com/playwright:v1.60.0-noble
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: $DDEV_APPROOT
+    working_dir: /var/www/html
+    user: "${UID:-1000}:${GID:-1000}"
+    ipc: host
+    environment:
+      - PLAYWRIGHT_BASE_URL=${DDEV_PRIMARY_URL}
+      - DRUPAL_USERNAME=${DDEV_DRUPAL_USER:-admin}
+      - DRUPAL_PASSWORD=${DDEV_DRUPAL_PASSWORD:-password}
+    volumes:
+      - ..:/var/www/html:cached
+      - ".:/mnt/ddev_config"
+    entrypoint: []
+    command: ["tail", "-f", "/dev/null"]

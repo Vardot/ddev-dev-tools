@@ -1,0 +1,37 @@
+#!/bin/bash
+
+## #ddev-generated
+## Description: Install Playwright npm dependencies inside the Playwright container
+## Usage: playwright-install
+## Example: "ddev playwright-install"
+
+set -euo pipefail
+
+# Find playwright config to determine project root
+PLAYWRIGHT_CONFIG=$(find /var/www/html/tests -name "playwright.config.*" -type f 2>/dev/null | head -1)
+
+if [ -z "$PLAYWRIGHT_CONFIG" ]; then
+    echo "❌ No playwright.config.* found under /var/www/html/tests/"
+    echo "   Create a Playwright config file first."
+    exit 1
+fi
+
+PROJECT_DIR=$(dirname "$PLAYWRIGHT_CONFIG")
+echo "📁 Found Playwright config: $PLAYWRIGHT_CONFIG"
+echo "📦 Installing dependencies in: $PROJECT_DIR"
+
+cd "$PROJECT_DIR"
+
+if [ -f "package.json" ]; then
+    npm install
+else
+    echo "❌ No package.json found in $PROJECT_DIR"
+    exit 1
+fi
+
+if [ ! -d "$HOME/.cache/ms-playwright" ] 2>/dev/null; then
+    echo "Installing Playwright browsers…"
+    npx playwright install chromium
+fi
+
+echo "✅ Playwright dependencies installed."
