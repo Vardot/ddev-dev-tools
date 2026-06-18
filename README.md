@@ -30,7 +30,7 @@ This addon includes commonly used DDEV commands for Drupal development with focu
 
 ### Drupal Installation 🔧
 
-- `install-drupal` - Install Drupal using existing configurations and a thin database
+- `install-drupal` - Install Drupal using existing configurations and a thin database. Runs `ddev post-install` automatically after installation if the commands's file exists.
 
 ## Installation
 
@@ -198,7 +198,7 @@ fi
 - **Playwright**
   - `playwright-install` - Install Playwright project dependencies from `tests/`
   - `playwright-test` - Run Playwright tests inside the Playwright container
-  - `dev-playwright` - Smart wrapper that detects tests and changed modules
+  - `dev-playwright` - Wrapper that runs all Playwright tests with optional filtering
 - **Cypress**
   - `cypress-open` - Open interactive Cypress window
   - `cypress-run` - Run Cypress tests in headless mode
@@ -216,7 +216,7 @@ This addon includes a dedicated Playwright container and command set for running
 - A `playwright` service based on the official Microsoft Playwright image
 - A `ddev playwright-install` command that installs project dependencies from `tests/`
 - A `ddev playwright-test` command that runs Playwright directly inside the container
-- A `ddev dev-playwright` command that adds smart CI/local behavior on top of the raw test runner
+- A `ddev dev-playwright` command that adds CI/local behavior on top of the raw test runner
 
 #### Project layout
 
@@ -244,25 +244,26 @@ ddev dev-playwright
 #### Common flags
 
 ```bash
-ddev dev-playwright --all
+ddev dev-playwright
 ddev dev-playwright --production
 ddev dev-playwright --grep=@smoke
+ddev dev-playwright --workers=4
+ddev dev-playwright --max-failures=3
 ddev dev-playwright --has-tests
 ```
 
-- `--all` runs the full Playwright suite.
-- `--production` runs the suite excluding `@slow` tests.
-- `--grep=<pattern>` runs a custom tag or name filter.
-- `--has-tests` is useful in CI to decide whether to continue with expensive setup steps.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--production` | — | Run the full suite excluding `@slow` tests. Auto-detected from `BITBUCKET_PR_DESTINATION_BRANCH` in CI. |
+| `--grep=<pattern>` | — | Run only tests matching a tag or name pattern. |
+| `--workers=<n>` | — | Number of parallel Playwright workers. |
+| `--max-failures=<n>` | `1` | Stop the run after N test failures. |
+| `--has-tests` | — | Pre-check mode: exits 0 if tests would run, exits 1 if not. Useful before expensive steps like `ddev install-drupal`. |
+| `--all` | — | Alias for the default behaviour (run all tests). Kept for backwards compatibility. |
 
-#### Smart CI behavior
+#### Default behaviour
 
-`ddev dev-playwright` supports two useful CI behaviors:
-
-- It checks for Playwright test files before running the suite.
-- In CI, it can derive `@feature-<module>` tags from changed custom Drupal modules and combine them with `@smoke`.
-
-That lets you keep your pipeline logic thin while still avoiding unnecessary installs or test runs.
+Running `ddev dev-playwright` with no flags runs the **full Playwright suite** — equivalent to `ddev playwright-test`. Pass `--production` or `--grep` to narrow the run.
 
 #### Playwright configuration
 
