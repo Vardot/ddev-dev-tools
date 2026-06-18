@@ -100,7 +100,7 @@ pipelines:
               - ddev auth ssh
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
-              - ddev install-Drupal
+              - ddev install-drupal
               - |
                 PLAYWRIGHT_FILES=$(find tests/playwright -type f \( -name "*.spec.*" -o -name "*.test.*" -o -name "*.cy.*" \) 2>/dev/null | wc -l)
                 if [ "$PLAYWRIGHT_FILES" -gt 0 ]; then
