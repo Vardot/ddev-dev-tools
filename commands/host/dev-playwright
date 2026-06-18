@@ -1,14 +1,13 @@
 #!/bin/bash
 
 ## #ddev-generated
-## Description: Run Playwright tests with smart tag filtering based on changed files
+## Description: Run Playwright tests
 ##
-## Usage: dev-playwright [--all] [--production] [--grep=<pattern>] [--has-tests]
+## Usage: dev-playwright [--production] [--grep=<pattern>] [--workers=<n>] [--max-failures=<n>] [--has-tests]
 ## Example: "ddev dev-playwright"
-##              Auto-detects changed modules and runs matching @smoke + @feature-<module> tests.
-##              Exits 0 silently if no matching tests are found.
-##          "ddev dev-playwright --all"
 ##              Runs all Playwright tests without any filtering.
+##          "ddev dev-playwright --all"
+##              Runs all Playwright tests without any filtering (alias for default).
 ##          "ddev dev-playwright --production"
 ##              Runs the full suite excluding @slow tests (suitable for production-targeting PRs).
 ##              Auto-detected when BITBUCKET_PR_DESTINATION_BRANCH is master/main/production.
@@ -22,8 +21,9 @@
 set -uo pipefail
 
 PRODUCTION=false
-RUN_ALL=false
 CUSTOM_GREP=""
+WORKERS=""
+MAX_FAILURES="1"
 HAS_TESTS_CHECK=false
 
 # Parse arguments
@@ -34,11 +34,19 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --all)
-            RUN_ALL=true
+            # --all is now the default; accepted for backwards compatibility
             shift
             ;;
         --grep=*)
             CUSTOM_GREP="${1#--grep=}"
+            shift
+            ;;
+        --workers=*)
+            WORKERS="${1#--workers=}"
+            shift
+            ;;
+        --max-failures=*)
+            MAX_FAILURES="${1#--max-failures=}"
             shift
             ;;
         --has-tests)
@@ -47,7 +55,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "❌ Unknown option: $1"
-            echo "Usage: dev-playwright [--all] [--production] [--grep=<pattern>] [--has-tests]"
+            echo "Usage: dev-playwright [--production] [--grep=<pattern>] [--has-tests]"
             exit 1
             ;;
     esac
@@ -78,18 +86,7 @@ if [ "$PRODUCTION" = "true" ]; then
         exit 0
     fi
     echo "🚀 Running full Playwright suite (excluding @slow) for production-targeting branch..."
-    ddev playwright-test --grep-invert "@slow"
-    exit $?
-fi
-
-# --all: run everything
-if [ "$RUN_ALL" = "true" ]; then
-    if [ "$HAS_TESTS_CHECK" = "true" ]; then
-        echo "✅ --all flag set — tests will run."
-        exit 0
-    fi
-    echo "🚀 Running all Playwright tests..."
-    ddev playwright-test
+    ddev playwright-test --grep-invert "@slow" ${WORKERS:+--workers="$WORKERS"} --max-failures="$MAX_FAILURES"
     exit $?
 fi
 
@@ -106,72 +103,15 @@ if [ -n "$CUSTOM_GREP" ]; then
     fi
     echo "🚀 Running Playwright tests matching: $CUSTOM_GREP"
     SAFE_CUSTOM_GREP=${CUSTOM_GREP//|/\\|}
-    ddev playwright-test --grep "$SAFE_CUSTOM_GREP"
+    ddev playwright-test --grep "$SAFE_CUSTOM_GREP" ${WORKERS:+--workers="$WORKERS"} --max-failures="$MAX_FAILURES"
     exit $?
 fi
 
-# Smart mode: detect changed modules and build grep filter from git diff
-echo "🔍 Detecting changed areas from git diff..."
-
-CHANGED_AREAS=""
-if [ "${IS_CI:-false}" = "TRUE" ]; then
-    # CI: compare PR branch against destination
-    CHANGED_AREAS=$(git diff --name-only --diff-filter=dr \
-        "origin/${BITBUCKET_PR_DESTINATION_BRANCH:-}...${BITBUCKET_BRANCH:-}" 2>/dev/null | \
-        sed -nE 's#.*(docroot|web)/(modules|themes)/custom/([^/]+)/.*#\3#p' | \
-        sort -u | tr '\n' ' ' || true)
-else
-    # Local: staged + unstaged changes
-    CHANGED_AREAS=$(
-        {
-            git diff --name-only 2>/dev/null
-            git diff --name-only --staged 2>/dev/null
-        } | sed -nE 's#.*(docroot|web)/(modules|themes)/custom/([^/]+)/.*#\3#p' | \
-        sort -u | tr '\n' ' ' || true
-    )
-fi
-
-# Build @feature-<module> tag list for changed modules
-FEATURE_TAGS=""
-for MODULE in $CHANGED_AREAS; do
-    [ -n "$MODULE" ] && FEATURE_TAGS="${FEATURE_TAGS}${FEATURE_TAGS:+|}@feature-${MODULE}"
-done
-
-if [ -n "$CHANGED_AREAS" ]; then
-    echo "   Changed modules: $CHANGED_AREAS"
-else
-    echo "   No custom module/theme changes detected."
-fi
-
-# Check for matching tests independently
-SMOKE_MATCHES=$( (grep -rEl "@smoke" tests/playwright/e2e/ 2>/dev/null || true) | wc -l )
-FEATURE_MATCHES=0
-if [ -n "$FEATURE_TAGS" ]; then
-    FEATURE_MATCHES=$( (grep -rEl "$FEATURE_TAGS" tests/playwright/e2e/ 2>/dev/null || true) | wc -l )
-fi
-
-if [ "$SMOKE_MATCHES" -eq 0 ] && [ "$FEATURE_MATCHES" -eq 0 ]; then
-    echo "ℹ️  No Playwright tests match tags (smoke=$SMOKE_MATCHES, feature=$FEATURE_MATCHES). Skipping."
-    echo "   Use --all to run the full suite or --grep=<pattern> for a custom filter."
-    [ "$HAS_TESTS_CHECK" = "true" ] && exit 1
-    exit 0
-fi
-
-# Prefer feature-tagged tests when any are available.
-# Fall back to smoke tests only when there are no feature matches.
-if [ "$FEATURE_MATCHES" -gt 0 ] && [ -n "$FEATURE_TAGS" ]; then
-    PLAYWRIGHT_GREP="$FEATURE_TAGS"
-else
-    PLAYWRIGHT_GREP="@smoke"
-fi
-
-echo "   Tags to run (smoke=$SMOKE_MATCHES, feature=$FEATURE_MATCHES): $PLAYWRIGHT_GREP"
-
+# Default: run all tests
 if [ "$HAS_TESTS_CHECK" = "true" ]; then
-    echo "✅ Matching tests found — proceeding."
+    echo "✅ Tests will run (full suite)."
     exit 0
 fi
 
-echo "🚀 Running Playwright tests for: $PLAYWRIGHT_GREP"
-SAFE_PLAYWRIGHT_GREP=${PLAYWRIGHT_GREP//|/\\|}
-ddev playwright-test --grep "$SAFE_PLAYWRIGHT_GREP"
+echo "🚀 Running all Playwright tests..."
+ddev playwright-test ${WORKERS:+--workers="$WORKERS"} --max-failures="$MAX_FAILURES"

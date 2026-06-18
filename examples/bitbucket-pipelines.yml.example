@@ -79,7 +79,7 @@ pipelines:
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
         - step:
-            name: 🚀 Install Drupal & Run Automated Tests
+            name: 🚀 Install Drupal & Run E2E Tests
             runs-on:
               - self.hosted
               - linux.shell
@@ -100,14 +100,13 @@ pipelines:
               - ddev auth ssh
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
-              - ddev install-drupal
-              - ddev dev-phpunit
+              - ddev install-Drupal
               - |
                 PLAYWRIGHT_FILES=$(find tests/playwright -type f \( -name "*.spec.*" -o -name "*.test.*" -o -name "*.cy.*" \) 2>/dev/null | wc -l)
                 if [ "$PLAYWRIGHT_FILES" -gt 0 ]; then
                   echo "Found $PLAYWRIGHT_FILES Playwright test files. Running Playwright..."
                   ddev playwright-install
-                  ddev dev-playwright
+                  ddev dev-playwright --workers="${PIPELINES_WORKERS_COUNT:-1}" --max-failures=1
                 else
                   echo "No Playwright test files found under tests/playwright. Checking for Cypress tests..."
                   FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
@@ -125,6 +124,36 @@ pipelines:
               - cypress/screenshots/**
               - cypress/videos/**
               - cypress/results/**
+            after-script:
+              - chmod 777 .ddev -R || true
+              - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
+              - export DOCKER_HOST=""
+              - export DOCKER_BUILDKIT=1
+              - ddev poweroff || true
+              - ddev stop --unlist --all --omit-snapshot --remove-data || true
+        - step:
+            name: 🧪 PHPUnit Tests
+            runs-on:
+              - self.hosted
+              - linux.shell
+              - main
+              - worker
+            clone:
+              depth: full
+            fail-fast: true
+            script:
+              - chmod 777 .ddev -R
+              - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
+              - export DOCKER_HOST=""
+              - export DOCKER_BUILDKIT=1
+              - ddev -v
+              - ddev poweroff || true
+              - ddev stop --unlist --all --omit-snapshot --remove-data || true
+              - ddev start
+              - ddev auth ssh
+              - ddev add-on get Vardot/ddev-dev-tools
+              - ddev restart
+              - ddev dev-phpunit
             after-script:
               - chmod 777 .ddev -R || true
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
