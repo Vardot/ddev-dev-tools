@@ -111,4 +111,9 @@ else
     fi
 fi
 
+if [ -f ".ddev/commands/host/post-install" ]; then
+    echo "🔧 Running post-install hook..."
+    ddev post-install
+fi
+
 echo "✅ Installation Complete!"

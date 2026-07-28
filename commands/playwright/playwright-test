@@ -1,0 +1,42 @@
+#!/bin/bash
+
+## #ddev-generated
+## Description: Run Playwright tests inside the Playwright container
+## Usage: playwright-test [arguments]
+## Example: "ddev playwright-test"
+##          "ddev playwright-test --grep @smoke"
+##          "ddev playwright-test --grep-invert @slow"
+##          "ddev playwright-test --project chromium"
+
+set -euo pipefail
+
+# Find playwright config
+PLAYWRIGHT_CONFIG=$(find /var/www/html/tests -name "playwright.config.*" -type f 2>/dev/null | head -1)
+
+if [ -z "$PLAYWRIGHT_CONFIG" ]; then
+    echo "❌ No playwright.config.* found under /var/www/html/tests/"
+    exit 1
+fi
+
+PROJECT_DIR=$(dirname "$PLAYWRIGHT_CONFIG")
+cd "$PROJECT_DIR"
+
+echo "🎭 Running Playwright tests..."
+echo "   Config: $PLAYWRIGHT_CONFIG"
+
+# Support PLAYWRIGHT_GREP env var as a fallback --grep filter when no --grep flag is passed
+ARGS=("$@")
+HAS_GREP=false
+for arg in "$@"; do
+    if [[ "$arg" == --grep* ]]; then
+        HAS_GREP=true
+        break
+    fi
+done
+
+if [ "$HAS_GREP" = "false" ] && [ -n "${PLAYWRIGHT_GREP:-}" ]; then
+    echo "   Grep filter (from env): $PLAYWRIGHT_GREP"
+    ARGS+=("--grep" "$PLAYWRIGHT_GREP")
+fi
+
+npx playwright test "${ARGS[@]+"${ARGS[@]}"}"

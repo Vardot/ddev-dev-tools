@@ -4,7 +4,9 @@ ddev_version_constraint: '>= v1.24.3'
 
 project_files:
   - docker-compose.cypress.yaml
+  - docker-compose.playwright.yaml
   - commands/host/dev-lint-all
+  - commands/host/dev-playwright
   - commands/host/install-drupal
   - commands/web/dev-cspell
   - commands/web/dev-eslint
@@ -19,6 +21,8 @@ project_files:
   - commands/cypress/cypress-headless
   - commands/cypress/cypress-install
   - commands/cypress/cypress-ui
+  - commands/playwright/playwright-install
+  - commands/playwright/playwright-test
 
 post_install_actions:
   - ddev composer install --no-interaction
@@ -47,7 +51,20 @@ post_install_actions:
           - "ddev-router:{{- replace (env "DDEV_TLD") "\\${DDEV_TLD}" (replace (env "DDEV_PROJECT") "\\${DDEV_PROJECT}" $n) -}}"
         {{- end }}
     END
-  - echo "Vardot's DDEV Dev Tools with Cypress support has been installed and configured!"
+  - |
+    #ddev-nodisplay
+    #ddev-description:Adding all hostnames to the playwright container to make them available
+    cat <<-END >docker-compose.playwright_extras.yaml
+    #ddev-generated
+    services:
+      playwright:
+        external_links:
+        {{- $playwright_hostnames := splitList "," (env "DDEV_HOSTNAME") -}}
+        {{- range $i, $n := $playwright_hostnames }}
+          - "ddev-router:{{- replace (env "DDEV_TLD") "\\${DDEV_TLD}" (replace (env "DDEV_PROJECT") "\\${DDEV_PROJECT}" $n) -}}"
+        {{- end }}
+    END
+  - echo "Vardot's DDEV Dev Tools with Cypress and Playwright support has been installed and configured!"
 
 removal_actions:
   - |
@@ -58,5 +75,15 @@ removal_actions:
         rm -f docker-compose.cypress_extras.yaml
       else
         echo "Unwilling to remove '$DDEV_APPROOT/.ddev/docker-compose.cypress_extras.yaml' because it does not have #ddev-generated in it; you can manually delete it if it is safe to delete."
+      fi
+    fi
+  - |
+    #ddev-nodisplay
+    #ddev-description:Remove docker-compose.playwright_extras.yaml file
+    if [ -f docker-compose.playwright_extras.yaml ]; then
+      if grep -q '#ddev-generated' docker-compose.playwright_extras.yaml; then
+        rm -f docker-compose.playwright_extras.yaml
+      else
+        echo "Unwilling to remove '$DDEV_APPROOT/.ddev/docker-compose.playwright_extras.yaml' because it does not have #ddev-generated in it; you can manually delete it if it is safe to delete."
       fi
     fi

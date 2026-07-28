@@ -30,7 +30,7 @@ This addon includes commonly used DDEV commands for Drupal development with focu
 
 ### Drupal Installation 🔧
 
-- `install-drupal` - Install Drupal using existing configurations and a thin database
+- `install-drupal` - Install Drupal using existing configurations and a thin database. Runs `ddev post-install` automatically after installation if the commands's file exists.
 
 ## Installation
 
@@ -195,6 +195,10 @@ fi
 ```
 
 ### Testing Tools 🧪
+- **Playwright**
+  - `playwright-install` - Install Playwright project dependencies from `tests/`
+  - `playwright-test` - Run Playwright tests inside the Playwright container
+  - `dev-playwright` - Wrapper that runs all Playwright tests with optional filtering
 - **Cypress**
   - `cypress-open` - Open interactive Cypress window
   - `cypress-run` - Run Cypress tests in headless mode
@@ -202,6 +206,71 @@ fi
 
 - **PHPUnit**
   - `dev-phpunit` - Run PHPUnit tests on custom modules
+
+### Playwright Testing 🎭
+
+This addon includes a dedicated Playwright container and command set for running browser tests in a DDEV-friendly way.
+
+#### What it adds
+
+- A `playwright` service based on the official Microsoft Playwright image
+- A `ddev playwright-install` command that installs project dependencies from `tests/`
+- A `ddev playwright-test` command that runs Playwright directly inside the container
+- A `ddev dev-playwright` command that adds CI/local behavior on top of the raw test runner
+
+#### Project layout
+
+Playwright is expected to live under `tests/playwright/` in your project. The smart runner looks for test files such as:
+
+- `*.spec.*`
+- `*.test.*`
+- `*.cy.*`
+
+If those files exist, `ddev dev-playwright` runs Playwright. If not, your pipeline can fall back to Cypress or skip automated tests entirely.
+
+#### Install and run
+
+```bash
+# Install dependencies for the Playwright project
+ddev playwright-install
+
+# Run all Playwright tests
+ddev playwright-test
+
+# Run through the smart wrapper
+ddev dev-playwright
+```
+
+#### Common flags
+
+```bash
+ddev dev-playwright
+ddev dev-playwright --production
+ddev dev-playwright --grep=@smoke
+ddev dev-playwright --workers=4
+ddev dev-playwright --max-failures=3
+ddev dev-playwright --has-tests
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--production` | — | Run the full suite excluding `@slow` tests. Auto-detected from `BITBUCKET_PR_DESTINATION_BRANCH` in CI. |
+| `--grep=<pattern>` | — | Run only tests matching a tag or name pattern. |
+| `--workers=<n>` | — | Number of parallel Playwright workers. |
+| `--max-failures=<n>` | `1` | Stop the run after N test failures. |
+| `--has-tests` | — | Pre-check mode: exits 0 if tests would run, exits 1 if not. Useful before expensive steps like `ddev install-drupal`. |
+| `--all` | — | Alias for the default behaviour (run all tests). Kept for backwards compatibility. |
+
+#### Default behaviour
+
+Running `ddev dev-playwright` with no flags runs the **full Playwright suite** — equivalent to `ddev playwright-test`. Pass `--production` or `--grep` to narrow the run.
+
+#### Playwright configuration
+
+The Playwright container exposes the primary DDEV URL as `PLAYWRIGHT_BASE_URL`.
+If your test app needs credentials, the container also provides Drupal login defaults through environment variables.
+
+Place your Playwright config under `tests/` so the addon can discover it automatically.
 
 It's recommended to run ddev cypress-open first to create configuration and support files. This addon sets CYPRESS_baseUrl to DDEV's primary URL in the docker-compose.cypress.yaml.
 

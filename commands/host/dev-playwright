@@ -1,0 +1,117 @@
+#!/bin/bash
+
+## #ddev-generated
+## Description: Run Playwright tests
+##
+## Usage: dev-playwright [--production] [--grep=<pattern>] [--workers=<n>] [--max-failures=<n>] [--has-tests]
+## Example: "ddev dev-playwright"
+##              Runs all Playwright tests without any filtering.
+##          "ddev dev-playwright --all"
+##              Runs all Playwright tests without any filtering (alias for default).
+##          "ddev dev-playwright --production"
+##              Runs the full suite excluding @slow tests (suitable for production-targeting PRs).
+##              Auto-detected when BITBUCKET_PR_DESTINATION_BRANCH is master/main/production.
+##          "ddev dev-playwright --grep=@smoke"
+##              Runs tests matching a custom grep pattern.
+##          "ddev dev-playwright --has-tests"
+##              Pre-check mode: exits 0 if there are matching tests to run, exits 1 if not.
+##              Use this before expensive steps like "ddev install-drupal" to skip the entire
+##              pipeline step when there are no relevant Playwright tests.
+
+set -uo pipefail
+
+PRODUCTION=false
+CUSTOM_GREP=""
+WORKERS=""
+MAX_FAILURES="1"
+HAS_TESTS_CHECK=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --production)
+            PRODUCTION=true
+            shift
+            ;;
+        --all)
+            # --all is now the default; accepted for backwards compatibility
+            shift
+            ;;
+        --grep=*)
+            CUSTOM_GREP="${1#--grep=}"
+            shift
+            ;;
+        --workers=*)
+            WORKERS="${1#--workers=}"
+            shift
+            ;;
+        --max-failures=*)
+            MAX_FAILURES="${1#--max-failures=}"
+            shift
+            ;;
+        --has-tests)
+            HAS_TESTS_CHECK=true
+            shift
+            ;;
+        *)
+            echo "❌ Unknown option: $1"
+            echo "Usage: dev-playwright [--production] [--grep=<pattern>] [--has-tests]"
+            exit 1
+            ;;
+    esac
+done
+
+# Auto-detect production branch from CI environment
+if [ "${IS_CI:-false}" = "TRUE" ]; then
+    if echo "${BITBUCKET_PR_DESTINATION_BRANCH:-}" | grep -qE '^(master|main|production)$'; then
+        PRODUCTION=true
+    fi
+fi
+
+# Check if playwright config exists at all
+PLAYWRIGHT_CONFIG_COUNT=$(find tests -name "playwright.config.*" -type f 2>/dev/null | wc -l)
+if [ "$PLAYWRIGHT_CONFIG_COUNT" -eq 0 ]; then
+    echo "ℹ️  No Playwright config found in tests/. Skipping Playwright tests."
+    # --has-tests: no config means no tests → exit 1 to signal "skip"
+    [ "$HAS_TESTS_CHECK" = "true" ] && exit 1
+    exit 0
+fi
+
+echo "🎭 Playwright config detected."
+
+# --production: run full suite minus @slow
+if [ "$PRODUCTION" = "true" ]; then
+    if [ "$HAS_TESTS_CHECK" = "true" ]; then
+        echo "✅ Production branch — tests will run (full suite, excluding @slow)."
+        exit 0
+    fi
+    echo "🚀 Running full Playwright suite (excluding @slow) for production-targeting branch..."
+    ddev playwright-test --grep-invert "@slow" ${WORKERS:+--workers="$WORKERS"} --max-failures="$MAX_FAILURES"
+    exit $?
+fi
+
+# --grep=<pattern>: run with custom filter
+if [ -n "$CUSTOM_GREP" ]; then
+    if [ "$HAS_TESTS_CHECK" = "true" ]; then
+        MATCHES=$(grep -rEl "$CUSTOM_GREP" tests/playwright/e2e/ 2>/dev/null | wc -l || echo 0)
+        if [ "$MATCHES" -eq 0 ]; then
+            echo "ℹ️  No tests match pattern: $CUSTOM_GREP"
+            exit 1
+        fi
+        echo "✅ Found $MATCHES test file(s) matching: $CUSTOM_GREP"
+        exit 0
+    fi
+    echo "🚀 Running Playwright tests matching: $CUSTOM_GREP"
+    SAFE_CUSTOM_GREP=${CUSTOM_GREP//|/\\|}
+    ddev playwright-test --grep "$SAFE_CUSTOM_GREP" ${WORKERS:+--workers="$WORKERS"} --max-failures="$MAX_FAILURES"
+    exit $?
+fi
+
+# Default: run all tests
+if [ "$HAS_TESTS_CHECK" = "true" ]; then
+    echo "✅ Tests will run (full suite)."
+    exit 0
+fi
+
+echo "🚀 Running all Playwright tests..."
+ddev playwright-test ${WORKERS:+--workers="$WORKERS"} --max-failures="$MAX_FAILURES"
