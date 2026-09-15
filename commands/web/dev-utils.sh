@@ -3,6 +3,19 @@
 ## #ddev-generated
 # Description: Utility functions for file handling in DDEV commands
 
+# Paths that linting must never reach, on top of node_modules. Anything under a
+# js/**/dist/ directory is bundler output, and js/**/src/ is the pre-transpile
+# source that bundler owns; neither is hand-edited in the form the Drupal linters
+# see, so findings there are noise no one can act on.
+GENERATED_PATH_PATTERN='(^|/)js/(.*/)?(src|dist)/'
+
+# Drops generated paths from a newline-separated file list on stdin.
+# grep exits 1 when it filters every line out, which is the ordinary "nothing left
+# to lint" case rather than an error, so it must not trip the callers' `set -e`.
+filter_generated_paths() {
+    grep -vE "$GENERATED_PATH_PATTERN" || true
+}
+
 # Function to check if a command is executable
 # Usage: check_command_executable "command_path" ["command_name"]
 # Returns: 0 if executable, exits with 1 if not executable or not found
@@ -54,6 +67,7 @@ get_changed_files() {
         changed_files=$(git diff --name-only "origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH" 2>/dev/null |
             grep -E "^${custom_path_pattern}\.($ext_pattern)$" |
             grep -v "node_modules" |
+            filter_generated_paths |
             tr '\n' ' ')
     else
         # In local environment, check both staged and unstaged changes
@@ -63,6 +77,7 @@ get_changed_files() {
                 git diff --name-only --staged 2>/dev/null
             } | grep -E "^${custom_path_pattern}\.($ext_pattern)$" |
             grep -v "node_modules" |
+            filter_generated_paths |
             sort -u | tr '\n' ' '
         )
     fi
@@ -79,7 +94,7 @@ get_all_files() {
     find ${docroot}/modules/custom ${docroot}/themes/custom -type f \
         -regextype posix-extended \
         -regex ".*\.($ext_pattern)$" \
-        -not -path "*/node_modules/*" | tr '\n' ' '
+        -not -path "*/node_modules/*" | filter_generated_paths | tr '\n' ' '
 }
 
 # Main function to get files based on arguments
@@ -118,7 +133,7 @@ get_files() {
                         if [ -f "$file" ] && echo "$file" | grep -q -E "\.($ext_pattern)$"; then
                             echo "$file"
                         fi
-                    done | tr '\n' ' ')
+                    done | filter_generated_paths | tr '\n' ' ')
                 ;;
             *)
                 >&2 echo "❌ Unknown option: $1"

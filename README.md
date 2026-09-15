@@ -72,6 +72,17 @@ ddev dev-twigcs --all      # Check all Twig files
 ddev dev-cspell --all      # Check all text files
 ```
 
+### Excluded Paths
+
+In every mode above, the linters skip paths that are not hand-written:
+
+- `node_modules/`
+- `js/**/dist/` - bundler output
+- `js/**/src/` - pre-transpile source the bundler owns
+
+This applies at any depth, so `js/dist/app.js` and `js/admin/build/dist/app.js`
+are both skipped. A `dist/` directory outside a `js/` directory is still linted.
+
 ### Combined Linting Commands
 
 **Check Changed Files**
