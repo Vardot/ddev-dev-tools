@@ -1,14 +1,28 @@
 #################
-# Version: 2.3.0
+# Version: 2.4.0
 #################
 triggers:
   pullrequest-push:
-    - condition: BITBUCKET_PR_DESTINATION_BRANCH == "dev" || BITBUCKET_PR_DESTINATION_BRANCH == "development" || BITBUCKET_PR_DESTINATION_BRANCH == "stg" || BITBUCKET_PR_DESTINATION_BRANCH == "staging" || BITBUCKET_PR_DESTINATION_BRANCH == "uat" || BITBUCKET_PR_DESTINATION_BRANCH == "master" || BITBUCKET_PR_DESTINATION_BRANCH == "production" || BITBUCKET_PR_DESTINATION_BRANCH == "main"
+    - condition: (BITBUCKET_PR_DESTINATION_BRANCH == "dev" || BITBUCKET_PR_DESTINATION_BRANCH == "development" || BITBUCKET_PR_DESTINATION_BRANCH == "stg" || BITBUCKET_PR_DESTINATION_BRANCH == "staging" || BITBUCKET_PR_DESTINATION_BRANCH == "uat" || BITBUCKET_PR_DESTINATION_BRANCH == "master" || BITBUCKET_PR_DESTINATION_BRANCH == "production" || BITBUCKET_PR_DESTINATION_BRANCH == "main") && glob(BITBUCKET_BRANCH, "hotfix/*")
+      pipelines:
+        - hotfix-skip
+    - condition: (BITBUCKET_PR_DESTINATION_BRANCH == "dev" || BITBUCKET_PR_DESTINATION_BRANCH == "development" || BITBUCKET_PR_DESTINATION_BRANCH == "stg" || BITBUCKET_PR_DESTINATION_BRANCH == "staging" || BITBUCKET_PR_DESTINATION_BRANCH == "uat" || BITBUCKET_PR_DESTINATION_BRANCH == "master" || BITBUCKET_PR_DESTINATION_BRANCH == "production" || BITBUCKET_PR_DESTINATION_BRANCH == "main") && !glob(BITBUCKET_BRANCH, "hotfix/*")
       pipelines:
         - all-steps
 
 pipelines:
   custom:
+    hotfix-skip:
+      - step:
+          name: ⏭️ Hotfix Branch
+          runs-on:
+            - self.hosted
+            - linux.shell
+            - init
+          clone:
+            enabled: false
+          script:
+            - echo "Hotfix branch, skipping pipelines.."
     all-steps:
       - step:
           name: 🛠️ Pipelines Initialization
@@ -33,11 +47,12 @@ pipelines:
             fail-fast: true
             script:
               - git --version
-              - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(php|module)$' | tr '\\n' ' ')
-              - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(js)$' | tr '\\n' ' ')
-              - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(css)$' | tr '\\n' ' ')
-              - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(twig)$' | tr '\\n' ' ')
-              - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\\n' ' ')
+              - if [ -n "$PIPELINES_WORKING_DIR" ]; then cd "$PIPELINES_WORKING_DIR"; fi
+              - PHP_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(php|module)$' | tr '\n' ' ')
+              - JS_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(js)$' | tr '\n' ' ')
+              - STYLE_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(css)$' | tr '\n' ' ')
+              - TWIG_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules|themes)/custom/.*\.(twig)$' | tr '\n' ' ')
+              - TEXT_CHANGED_FILES=$(git diff --name-only --diff-filter=dr origin/$BITBUCKET_PR_DESTINATION_BRANCH...$BITBUCKET_BRANCH | grep -E '(docroot|web)/(modules)/custom/.*\.(php|module|js|twig|yml|yaml|json|css|scss|sass|md|txt)$' | tr '\n' ' ')
               - if [ -z "$PHP_CHANGED_FILES" ] && [ -z "$JS_CHANGED_FILES" ] && [ -z "$STYLE_CHANGED_FILES" ] && [ -z "$TWIG_CHANGED_FILES" ] && [ -z "$TEXT_CHANGED_FILES" ]; then
               - echo "No relevant files changed. Skipping Linting..."
               - else
@@ -55,6 +70,7 @@ pipelines:
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
+              - rm -rf ~/.ddev/project_list.yaml
               - ddev -v
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
@@ -79,6 +95,7 @@ pipelines:
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
         - step:
+            max-time: 240
             name: 🚀 Install Drupal & Run E2E Tests
             runs-on:
               - self.hosted
@@ -89,10 +106,12 @@ pipelines:
               depth: full
             fail-fast: true
             script:
+              - if [ -n "$PIPELINES_WORKING_DIR" ]; then cd "$PIPELINES_WORKING_DIR"; fi
               - chmod 777 .ddev -R
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
+              - rm -rf ~/.ddev/project_list.yaml
               - ddev -v
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
@@ -100,13 +119,36 @@ pipelines:
               - ddev auth ssh
               - ddev add-on get Vardot/ddev-dev-tools
               - ddev restart
-              - ddev install-drupal
+              - ddev install-drupal --uninstall-modules "${PIPELINES_UNINSTALL_MODULES:-}"
               - |
+                TAG=""
+                if [ "${PIPELINES_USE_TAGS:-FALSE}" = "TRUE" ]; then
+                  case "$BITBUCKET_PR_DESTINATION_BRANCH" in
+                    dev|development)
+                      TAG="@smoke"
+                      ;;
+                    stg|staging|uat)
+                      TAG="@smoke|@functional"
+                      ;;
+                    production|prod|master|main)
+                      TAG=""
+                      ;;
+                  esac
+                  if [ -n "$TAG" ]; then
+                    echo "Tag-based testing enabled. Using tag \"$TAG\" for branch \"$BITBUCKET_PR_DESTINATION_BRANCH\"."
+                  else
+                    echo "Tag-based testing enabled, but branch \"$BITBUCKET_PR_DESTINATION_BRANCH\" runs the full default suite."
+                  fi
+                fi
                 PLAYWRIGHT_FILES=$(find tests/playwright -type f \( -name "*.spec.*" -o -name "*.test.*" -o -name "*.cy.*" \) 2>/dev/null | wc -l)
                 if [ "$PLAYWRIGHT_FILES" -gt 0 ]; then
                   echo "Found $PLAYWRIGHT_FILES Playwright test files. Running Playwright..."
                   ddev playwright-install
-                  ddev dev-playwright --workers="${PIPELINES_WORKERS_COUNT:-1}" --max-failures=1
+                  if [ -n "$TAG" ]; then
+                    ddev dev-playwright --grep="$TAG" --workers="${PIPELINES_PLAYWRIGHT_WORKERS:-1}" --max-failures=1
+                  else
+                    ddev dev-playwright --workers="${PIPELINES_PLAYWRIGHT_WORKERS:-1}" --max-failures=1
+                  fi
                 else
                   echo "No Playwright test files found under tests/playwright. Checking for Cypress tests..."
                   FEATURE_FILES=$(find cypress -name "*.feature" -type f 2>/dev/null | wc -l)
@@ -132,6 +174,7 @@ pipelines:
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
         - step:
+            max-time: 240
             name: 🧪 PHPUnit Tests
             runs-on:
               - self.hosted
@@ -142,17 +185,18 @@ pipelines:
               depth: full
             fail-fast: true
             script:
+              - if [ -n "$PIPELINES_WORKING_DIR" ]; then cd "$PIPELINES_WORKING_DIR"; fi
               - chmod 777 .ddev -R
               - chmod 777 docroot/sites/default -R 2>/dev/null || chmod 777 web/sites/default -R 2>/dev/null || true
               - export DOCKER_HOST=""
               - export DOCKER_BUILDKIT=1
+              - rm -rf ~/.ddev/project_list.yaml
               - ddev -v
               - ddev poweroff || true
               - ddev stop --unlist --all --omit-snapshot --remove-data || true
               - ddev start
               - ddev auth ssh
               - ddev add-on get Vardot/ddev-dev-tools
-              - ddev restart
               - ddev dev-phpunit
             after-script:
               - chmod 777 .ddev -R || true

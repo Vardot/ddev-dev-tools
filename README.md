@@ -31,6 +31,7 @@ This addon includes commonly used DDEV commands for Drupal development with focu
 ### Drupal Installation 🔧
 
 - `install-drupal` - Install Drupal using existing configurations and a thin database. Runs `ddev post-install` automatically after installation if the commands's file exists.
+  - `--uninstall-modules "module1 module2"` (or `-u`) - Additional modules to uninstall after installation.
 
 ## Installation
 
@@ -95,6 +96,35 @@ ddev dev-phpcs --ext=php,module,inc
 ### CI/CD Integration 🔄
 
 This addon supports various CI/CD platforms including BitBucket Pipelines, GitHub Actions, Azure DevOps, and GitLab CI.
+
+#### Bitbucket Pipelines Example
+
+A ready-to-use pipeline is available at [examples/bitbucket-pipelines.yml.example](examples/bitbucket-pipelines.yml.example). It runs on pull requests targeting `dev`, `development`, `stg`, `staging`, `uat`, `master`, `production`, or `main`, with three parallel steps:
+
+- 🧹 **Linting & Spell Checking** - `ddev dev-lint` on changed custom code only (skipped when nothing relevant changed)
+- 🚀 **Install Drupal & Run E2E Tests** - `ddev install-drupal`, then Playwright (`tests/playwright`) or Cypress (`.feature` files) as a fallback
+- 🧪 **PHPUnit Tests** - `ddev dev-phpunit`
+
+PRs from `hotfix/*` branches run the `hotfix-skip` pipeline instead and skip all checks. Test steps have a `max-time` of 240 minutes.
+
+**Repository variables**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITHUB_TOKEN` | — | GitHub OAuth token for Composer (store as a secured variable). |
+| `PIPELINES_WORKING_DIR` | — | Subdirectory to run in, for repos where the DDEV project is not at the root. |
+| `PIPELINES_IS_COREPACKAGE_ENABLED` | — | Set to `TRUE` to run `corepack enable` before `yarn install`. |
+| `PIPELINES_UNINSTALL_MODULES` | — | Space-separated modules passed to `ddev install-drupal --uninstall-modules`. |
+| `PIPELINES_PLAYWRIGHT_WORKERS` | `1` | Number of Playwright workers. |
+| `PIPELINES_USE_TAGS` | `FALSE` | Set to `TRUE` to filter Playwright tests by tag based on the PR destination branch (see below). |
+
+**Tag-based testing** (`PIPELINES_USE_TAGS=TRUE`)
+
+| Destination branch | Playwright `--grep` |
+|--------------------|---------------------|
+| `dev`, `development` | `@smoke` |
+| `stg`, `staging`, `uat` | `@smoke\|@functional` |
+| `production`, `prod`, `master`, `main` | Full suite (no filter) |
 
 #### Option 1: Environment Variables
 
