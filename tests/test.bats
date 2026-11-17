@@ -68,6 +68,35 @@ teardown() {
   health_checks
 }
 
+@test "linters skip generated js paths" {
+  set -eu -o pipefail
+  source "${DIR}/commands/web/dev-utils.sh"
+
+  run bash -c 'source "'"${DIR}"'/commands/web/dev-utils.sh"; printf "%s\n" \
+    "docroot/modules/custom/mod/js/dist/bundle.js" \
+    "docroot/modules/custom/mod/js/admin/build/dist/vendor.js" \
+    "docroot/modules/custom/mod/js/src/main.js" \
+    "js/dist/bare.js" \
+    "docroot/modules/custom/mod/js/app.js" \
+    "docroot/themes/custom/thm/js/global.js" \
+    "docroot/modules/custom/mod/dist/outside-js.js" | filter_generated_paths'
+  assert_success
+  refute_output --partial "js/dist/bundle.js"
+  refute_output --partial "build/dist/vendor.js"
+  refute_output --partial "js/src/main.js"
+  refute_output --partial "js/dist/bare.js"
+  assert_output --partial "docroot/modules/custom/mod/js/app.js"
+  assert_output --partial "docroot/themes/custom/thm/js/global.js"
+  assert_output --partial "docroot/modules/custom/mod/dist/outside-js.js"
+
+  # Filtering everything out is "nothing to lint", not a failure: the callers all
+  # run under `set -e`, so a bare grep here would abort them.
+  run bash -c 'set -e; source "'"${DIR}"'/commands/web/dev-utils.sh"; \
+    echo "docroot/modules/custom/mod/js/dist/only.js" | filter_generated_paths'
+  assert_success
+  assert_output ""
+}
+
 # bats test_tags=release
 @test "install from release" {
   set -eu -o pipefail
