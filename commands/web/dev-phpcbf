@@ -1,0 +1,53 @@
+#!/bin/bash
+
+set -euo pipefail
+
+## #ddev-generated
+## Description: Run PHPCBF to auto-fix PHP files
+# Usage: ddev dev-phpcbf [--all] [--files=file1.php,file2.module]
+# Example: "ddev dev-phpcbf" (checks git diff)
+#          "ddev dev-phpcbf --all" (fixes all PHP files)
+#          "ddev dev-phpcbf --files=file1.php,file2.module" (fixes specific files)
+
+source "${0%/*}/dev-utils.sh"
+
+DEFAULT_EXTENSIONS=("php" "module")
+EXTENSIONS=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ext=*)
+            IFS=',' read -r -a EXTENSIONS <<< "${1#--ext=}"
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [ ${#EXTENSIONS[@]} -eq 0 ]; then
+    EXTENSIONS=("${DEFAULT_EXTENSIONS[@]}")
+fi
+
+FILES=""
+
+if [ $# -eq 0 ]; then
+    FILES=$(get_files "${EXTENSIONS[@]}")
+else
+    FILES=$(get_files "${EXTENSIONS[@]}" "$@")
+fi
+
+if [ -z "${FILES:-}" ]; then
+    echo "✅ No files to fix"
+    exit 0
+fi
+
+echo "Files to fix:"
+echo "$FILES" | tr ' ' '\n'
+
+# Check if phpcbf is executable
+check_command_executable "$(command -v phpcbf 2>/dev/null || echo '/var/www/html/bin/phpcbf')" "phpcbf"
+
+# Run PHPCBF with Drupal standards to auto-fix files
+phpcbf -- -s --colors --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,css,info,txt,md,yml --exclude=Drupal.Files.LineLength,Drupal.Files.TxtFileLineLength $FILES
